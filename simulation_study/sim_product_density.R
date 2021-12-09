@@ -97,4 +97,3 @@ ylim <- rep(list(ylim), 3)
 fnames <- rep(list(paste0("f", 1:5)), 3)
 for (i in 1:3) fnames[[i]][2*(i-1)+1] <- paste0("f", 2*(i-1)+1, " (true)")
 myBoxplot(scorelist, fnames , mnames, ylim, filePath, zline = F)
-
