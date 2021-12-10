@@ -8,9 +8,7 @@
 rpath <- getwd()
   
 # Path for figures
-fpath <- "/home/jbrehmer/Documents/_temp/JASA_version/figures"
-###
-### Set to getwd() later
+fpath <- getwd()
 
 # Set a seed
 set.seed(2020)

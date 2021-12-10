@@ -5,14 +5,12 @@
 rpath <- getwd()
 
 # Path for figures
-fpath <- "/home/jbrehmer/Documents/_temp/JASA_version/figures"
+fpath <- getwd()
 
 # Path for data
 # The files containing the forecasts and observations should
 # be located in this folder
-dpath <- "/home/jbrehmer/EQData"
-###
-### Set to getwd() later
+dpath <- getwd()
 
 # Set file names (default names)
 # The forecast model outputs are arrays with time in rows
