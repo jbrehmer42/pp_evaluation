@@ -15,7 +15,7 @@ dpath <- getwd()
 # Set file names (default names)
 # The forecast model outputs are arrays with time in rows
 # and grid cells in the columns
-modelNames <- c("ETAS_LM1.txt.xz", "ETES_FMC.txt.xz",
+modelNames <- c("ETAS_LM.txt.xz", "ETES_FMC.txt.xz",
                 "STEP_LG.txt.xz", "Bayesian_corr_27_10.txt.xz")
 # Time stamps corresponding to model outputs
 # (rows of the model output data)
