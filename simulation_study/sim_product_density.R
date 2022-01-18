@@ -8,7 +8,7 @@
 rpath <- getwd()
 
 # Path for figures
-fpath <- "/home/jbrehmer/Documents/_temp/JASA_version/figures"
+fpath <- "/home/jbrehmer/Documents/_temp/figures"
 ###
 ### Set to getwd() later
 
@@ -47,7 +47,7 @@ library(cubature)
 library(RandomFields)
 
 # Load auxiliary functions
-source(paste0(rpath, "/sim_functions.R"))
+source(file.path(rpath, "sim_functions.R"))
 
 # Compute integrals of forecast of the product density
 # which corresponds to the functions f1, ..., f5
@@ -59,7 +59,7 @@ fcast <- 1:5
 ## Simulations and plots ##
 
 # Plot of product densities
-filePath <- paste(fpath, "plot_product_densities.pdf", sep = "/")
+filePath <- file.path(fpath, "plot_product_densities.pdf")
 plotProduct(fcast_funs, filePath)
 
 # Save mean scores of each experiment for boxplot
@@ -69,7 +69,7 @@ scorelist <- list()
 ## 1) Log-Gaussian Cox process
 res <- experiment("homLGCP", ScoreProductDensity, fcast_funs, fcast_norm, M, N)
 # Print the DM table
-filePath <- paste(fpath, "DM_table_prod_LGCP.tex", sep = "/")
+filePath <- file.path(fpath, "DM_table_prod_LGCP.tex")
 array2teX(res$DM, fcast, filePath, color = tabColor)
 scorelist[[1]] <- res$Scores
 
@@ -77,7 +77,7 @@ scorelist[[1]] <- res$Scores
 ## 2) Poisson point process
 res <- experiment("homPoisson", ScoreProductDensity, fcast_funs, fcast_norm, M, N)
 # Print the DM table
-filePath <- paste(fpath, "DM_table_prod_Poisson.tex", sep = "/")
+filePath <- file.path(fpath, "DM_table_prod_Poisson.tex")
 array2teX(res$DM, fcast, filePath, color = tabColor)
 scorelist[[2]] <- res$Scores
 
@@ -85,13 +85,13 @@ scorelist[[2]] <- res$Scores
 ## 3) Determinantal point process
 res <- experiment("homDPP", ScoreProductDensity, fcast_funs, fcast_norm, M, N)
 # Print the DM table
-filePath <- paste(fpath, "DM_table_prod_DPP.tex", sep = "/")
+filePath <- file.path(fpath, "DM_table_prod_DPP.tex")
 array2teX(res$DM, fcast, filePath, color = tabColor)
 scorelist[[3]] <- res$Scores
 
 
 ## Create boxplot
-filePath <- paste(fpath, "boxplot_product.pdf", sep = "/")
+filePath <- file.path(fpath, "boxplot_product.pdf")
 ylim <- c( min(sapply(scorelist, min)), max(sapply(scorelist, max)) )
 ylim <- rep(list(ylim), 3)
 fnames <- rep(list(paste0("f", 1:5)), 3)
