@@ -98,27 +98,7 @@ simu <- function(name, N) {
   # N    - Sample size
   if (name == "Poisson") dat <- rpoispp(f0, nsim = N)
   if (name == "DPP") {
-    # Simulation of the inhomogeneous determinantal point process (DPP) currently
-    # demands special treatment due to a bug in the package sptatstat.core
-    # We catch this error and do another simulation if it occurs. Since we suspect
-    # that the error occurs whenever a realization with only one point happens, we
-    # add a single random point in this case.
-    dat <- NULL
-    trys <- 0
-    while(is.null(dat)) {
-      dat <- tryCatch(
-        {
-          trys <- trys + 1
-          simulate( dppGauss(lambda = DPPvar, alpha = DPPscale, d = 2), nsim = N - trys + 1)
-        },
-        error = function(cond) {
-          message(cond)
-          cat("\n")
-          return(NULL)
-        } )
-    }
-    # Add point patterns with a single point if an error occured
-    if (length(dat) < N) dat <- c(dat, runifpoint(1, nsim = N - length(dat), drop = F))
+    dat <- simulate( dppGauss(lambda = DPPvar, alpha = DPPscale, d = 2), nsim = N)
     # Thin the homogeneous DPP
     f0thin <- function(ppat) rthin(ppat, function(x,y) f0(x,y)/DPPvar )
     dat <- lapply(dat, f0thin)

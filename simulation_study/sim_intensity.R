@@ -10,6 +10,7 @@ rpath <- getwd()
 # Path for figures
 fpath <- getwd()
 
+
 # Set a seed
 set.seed(2020)
 
@@ -48,7 +49,7 @@ library(cubature)
 library(RandomFields)
 
 # Load auxiliary functions
-source(paste0(rpath, "/sim_functions.R"))
+source(file.path(rpath, "sim_functions.R"))
 
 # Compute integrals of forecast intensities
 fcast_norm <- sapply(fcast_funs, integrate2D)
@@ -59,7 +60,7 @@ fcast <- 0:5
 ## Simulations and plots ##
 
 # Do 2D plot of intensity forecasts
-filePath <- paste(fpath, "plot_intensities.pdf", sep = "/")
+filePath <- file.path(fpath, "plot_intensities.pdf")
 plotIntensities(fcast_funs, filePath)
 
 
@@ -71,7 +72,7 @@ difflist1 <- list()
 ## 1.1) Poisson point process
 res <- experiment("Poisson", ScoreIntensity1, fcast_funs, fcast_norm, M, N)
 # Print the DM table
-filePath <- paste(fpath, "DM_table_s1_Poisson.tex", sep = "/")
+filePath <- file.path(fpath, "DM_table_s1_Poisson.tex")
 array2teX(res$DM, fcast, filePath, color = tabColor)
 # Compute score differences for boxplots
 difflist1[[1]] <- res$Scores[ ,2:nfcast] - res$Scores[ ,rep(1, nfcast-1)]
@@ -80,7 +81,7 @@ difflist1[[1]] <- res$Scores[ ,2:nfcast] - res$Scores[ ,rep(1, nfcast-1)]
 ## 1.2) Determinantal point process
 res <- experiment("DPP", ScoreIntensity1, fcast_funs, fcast_norm, M, N)
 # Print the DM table
-filePath <- paste(fpath, "DM_table_s1_DPP.tex", sep = "/")
+filePath <- file.path(fpath, "DM_table_s1_DPP.tex")
 array2teX(res$DM, fcast, filePath, color = tabColor)
 # Compute score differences for boxplots
 difflist1[[2]] <- res$Scores[ ,2:nfcast] - res$Scores[ ,rep(1, nfcast-1)]
@@ -89,7 +90,7 @@ difflist1[[2]] <- res$Scores[ ,2:nfcast] - res$Scores[ ,rep(1, nfcast-1)]
 ## 1.3) Log-Gaussian Cox process
 res <- experiment("LGCP", ScoreIntensity1, fcast_funs, fcast_norm, M, N)
 # Print the DM table
-filePath <- paste(fpath, "DM_table_s1_LGCP.tex", sep = "/")
+filePath <- file.path(fpath, "DM_table_s1_LGCP.tex")
 array2teX(res$DM, fcast, filePath, color = tabColor)
 # Compute score differences for boxplots
 difflist1[[3]] <- res$Scores[ ,2:nfcast] - res$Scores[ ,rep(1, nfcast-1)]
@@ -98,14 +99,14 @@ difflist1[[3]] <- res$Scores[ ,2:nfcast] - res$Scores[ ,rep(1, nfcast-1)]
 ## 1.4) Thomas cluster process
 res <- experiment("Thomas", ScoreIntensity1, fcast_funs, fcast_norm, M, N)
 # Print the DM table
-filePath <- paste(fpath, "DM_table_s1_Thomas.tex", sep = "/")
+filePath <- file.path(fpath, "DM_table_s1_Thomas.tex")
 array2teX(res$DM, fcast, filePath, color = tabColor)
 # Compute score differences for boxplots
 difflist1[[4]] <- res$Scores[ ,2:nfcast] - res$Scores[ ,rep(1, nfcast-1)]
 
 
 ## Create boxplot for scoring function S1
-filePath <- paste(fpath, "boxplot_intensity_s1.pdf", sep = "/")
+filePath <- file.path(fpath, "boxplot_intensity_s1.pdf")
 diffmin <- sapply(difflist1, min)
 diffmax <- sapply(difflist1, max)
 ylim <- rep(list(c(min(diffmin), max(diffmax))), 4)
@@ -123,7 +124,7 @@ DMlist <- list()
 ## 2.1) Poisson point process
 res <- experiment("Poisson", ScoreIntensity2, fcast_funs, fcast_norm, M, N)
 # Print the DM table
-filePath <- paste(fpath, "DM_table_s2_Poisson.tex", sep = "/")
+filePath <- file.path(fpath, "DM_table_s2_Poisson.tex")
 array2teX(res$DM, fcast, filePath, color = tabColor)
 DMlist[[1]] <- res$DM
 # Compute score differences for boxplots
@@ -133,7 +134,7 @@ difflist2[[1]] <- res$Scores[ ,2:nfcast] - res$Scores[ ,rep(1, nfcast-1)]
 ## 2.2) Determinantal point process
 res <- experiment("DPP", ScoreIntensity2, fcast_funs, fcast_norm, M, N)
 # Print the DM table
-filePath <- paste(fpath, "DM_table_s2_DPP.tex", sep = "/")
+filePath <- file.path(fpath, "DM_table_s2_DPP.tex")
 array2teX(res$DM, fcast, filePath, color = tabColor)
 DMlist[[2]] <- res$DM
 # Compute score differences for boxplots
@@ -143,7 +144,7 @@ difflist2[[2]] <- res$Scores[ ,2:nfcast] - res$Scores[ ,rep(1, nfcast-1)]
 ## 2.3) Log-Gaussian Cox process
 res <- experiment("LGCP", ScoreIntensity2, fcast_funs, fcast_norm, M, N)
 # Print the DM table
-filePath <- paste(fpath, "DM_table_s2_LGCP.tex", sep = "/")
+filePath <- file.path(fpath, "DM_table_s2_LGCP.tex")
 array2teX(res$DM, fcast, filePath, color = tabColor)
 DMlist[[3]] <- res$DM
 # Compute score differences for boxplots
@@ -153,7 +154,7 @@ difflist2[[3]] <- res$Scores[ ,2:nfcast] - res$Scores[ ,rep(1, nfcast-1)]
 ## 2.4) Thomas cluster process
 res <- experiment("Thomas", ScoreIntensity2, fcast_funs, fcast_norm, M, N)
 # Print the DM table
-filePath <- paste(fpath, "DM_table_s2_Thomas.tex", sep = "/")
+filePath <- file.path(fpath, "DM_table_s2_Thomas.tex")
 array2teX(res$DM, fcast, filePath, color = tabColor)
 DMlist[[4]] <- res$DM
 # Compute score differences for boxplots
@@ -161,7 +162,7 @@ difflist2[[4]] <- res$Scores[ ,2:nfcast] - res$Scores[ ,rep(1, nfcast-1)]
 
 
 ## Create boxplot for scoring function S2
-filePath <- paste(fpath, "boxplot_intensity_s2.pdf", sep = "/")
+filePath <- file.path(fpath, "boxplot_intensity_s2.pdf")
 diffmin <- sapply(difflist2, min)
 diffmax <- sapply(difflist2, max)
 ylim <- rep(list(c(min(diffmin), max(diffmax))), 4)
@@ -198,5 +199,5 @@ approxlist[[4]] <- experiment_cells("Thomas", fcast_cell, nset, fbase, M, N)
 
 
 ## Create plot for DM frequency convergence
-filePath <- paste(fpath, "plot_DM_convergence.pdf", sep = "/")
+filePath <- file.path(fpath, "plot_DM_convergence.pdf")
 plotDMconv(approxlist, DMlist, 1:6, fbase, mnames, filePath)

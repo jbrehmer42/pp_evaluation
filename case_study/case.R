@@ -32,7 +32,7 @@ library(maps)
 
 
 # Load auxiliary functions
-source(paste0(rpath, "/case_functions.R"))
+source(file.path(rpath, "case_functions.R"))
 
 # Set model names and their colors
 mnames <- c("LM", "FMC", "LG", "SMA")
@@ -46,21 +46,21 @@ lastday <- list(DD = 20, MM = 5, YY = 2020)
 ## Load data ##
 
 # Load time stamps for the models
-filePath <- paste0(dpath, "/", timestampName)
+filePath <- file.path(dpath, timestampName)
 res <- load_times(filePath, lastday)
 times <- res$times
 
 # Load list of model forecasts
-filePaths <- paste0(dpath, "/", modelNames)
+filePaths <- file.path(dpath, modelNames)
 models <- load_models(filePaths, res$tindex)
 nmods <- length(models)
 
 # Load the grid cell data (testing region)
-filePath <- paste0(dpath, "/", cellName)
+filePath <- file.path(dpath, cellName)
 cells <- load_cells(filePath)
 
 # Load data frame of M4+ events
-filePath <- paste0(dpath, "/", eventsName)
+filePath <- file.path(dpath, eventsName)
 events <- load_events(filePath, times)
 
 # Filter the M4+ events for testing region
@@ -88,22 +88,22 @@ for (i in 1:nmods) {
 }
 
 # Create lateX table for the overall mean scores
-filePath <- paste(fpath, "score_table.tex", sep = "/")
+filePath <- file.path(fpath, "score_table.tex")
 scores2teX(scores_pois, scores_quad, mnames, filePath)
 
 # Create plot of daily scores (Poisson)
-filePath <- paste(fpath, "plot_pois_time_log.pdf", sep = "/")
+filePath <- file.path(fpath, "plot_pois_time_log.pdf")
 plotScores(scores_pois, times, mnames, mcols, filePath, events = events) 
 
 # Create plot of daily scores (Quadratic)
-filePath <- paste(fpath, "plot_quad_time_log.pdf", sep = "/")
+filePath <- file.path(fpath, "plot_quad_time_log.pdf")
 plotScores(scores_quad, times, mnames, mcols, filePath, events = events) 
 
 
 # Plot maps of score differences
 for (i in 2:nmods) {
   sdiff <- colMeans( Spois(models[[1]], obs) - Spois(models[[i]], obs) )
-  filePath <- paste0(fpath, "/", "map_score_diff_1", i, ".pdf")
+  filePath <- file.path(fpath, paste0("map_score_diff_1", i, ".pdf"))
   diffMap(sdiff, cells, filePath)
 }
 
@@ -121,7 +121,7 @@ obs <- obs %*% nmat
 
 for (i in 2:nmods) {
   sdiff <- colMeans( Spois(models[[1]], obs) - Spois(models[[i]], obs) )
-  filePath <- paste0(fpath, "/", "map_score_diff_1", i, "_agg", k, ".pdf")
+  filePath <- file.path(fpath, paste0("map_score_diff_1", i, "_agg", k, ".pdf"))
   diffMap(sdiff, cells, filePath)
 }
 
