@@ -5,12 +5,12 @@
 rpath <- getwd()
 
 # Path for figures
-fpath <- "/home/jbrehmer/Documents/_temp/JASA_version/figures"
+fpath <- "/media/myData/Plots"
 
 # Path for data
 # The files containing the forecasts and observations should
 # be located in this folder
-dpath <- "/home/jbrehmer/EQData"
+dpath <- "/media/myData/EQData"
 ###
 ### Set to getwd() later
 
