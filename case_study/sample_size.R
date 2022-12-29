@@ -13,6 +13,12 @@ plot_pacf <- function(x, file_path, main) {
   dev.off()
 }
 
+plot_acf <- function(x, file_path, main) {
+  pdf(file_path, width = 8, height = 5.5)
+  acf(x, main = main, lag.max = 7)
+  dev.off()
+}
+
 plot_diff <- function(x, file_path, main) {
   pdf(file_path, width = 8, height = 5.5)
   plot(1:length(x), x, main = main, xlab = "week", ylab = "score difference")
@@ -34,11 +40,11 @@ for (i in 1:7) {
       diffs <- scores_day[[j]] - scores_day[[k]]
       day_mean[j, k] <- (mean(scores_day[[j]]) + mean(scores_day[[k]]))/2
       day_var[j, k] <- var(diffs)
-      file_path <- file.path(fpath, paste("sample/pacf", j, k, day_names[i],
+      file_path <- file.path(fpath, paste("sample/acf", j, k, day_names[i],
                                           ".pdf", sep="_"))
-      main = paste0("Partial autocorrelation of score differences between ",
+      main = paste0("Autocorrelation of score differences between ",
                     mnames[j], " and ", mnames[k], " on ", day_names[i], "s")
-      plot_pacf(diffs, file_path, main)
+      plot_acf(diffs, file_path, main)
       file_path <- file.path(fpath, paste("sample/diffs", j, k, day_names[i],
                                           ".pdf", sep="_"))
       main = paste0("Score differences between ", mnames[j], " and ", mnames[k],
@@ -59,14 +65,14 @@ ind <- 1
 for (j in 1:4) {
   for (k in 1:4) {
     if (j >= k) next
-    diff_names[ind] <- paste0(mnames[k], " - ", mnames[j])
+    diff_names[ind] <- paste0(mnames[j], " - ", mnames[k])
     ind <- ind + 1
   }
 }
 
 file_path <- file.path(fpath, "sample/var_comparison.pdf")
 pdf(file_path, width = 8, height = 6)
-plot(0, 0, col="white", xlim = c(1, 9), ylim = c(0, 15), ylab = "Varianz",
+plot(0, 0, col="white", xlim = c(1, 9), ylim = c(0, 15), ylab = "variance",
      main = "Comparison of score differences variances", xaxt="n", xlab="")
 for (i in 1:6) {
   lines(1:7, days_var2[i, ], col = diff_cols[i], lwd = 1.5)
@@ -98,3 +104,21 @@ for (j in 1:4) {
     dev.off()
   }
 }
+
+## Plot for LM-FMC and Friday ([1, 2] and day=5)
+p <- c(seq(0.03, 0.04, by = 0.001), seq(0.045, 0.1, by = 0.002),
+       seq(0.11, 0.4, by = 0.01))
+
+m1 <- 1
+m2 <- 2
+day_ind <- 5
+file_path <- file.path(fpath, paste0("sample/", "plot_sample_size_pois_",
+                                     mnames[m1], "_", mnames[m2], "_",
+                                     strtrim(day_names[day_ind], 3), ".pdf"))
+pdf(file_path, width = 8, height = 5.5)
+par(mar = c(4, 4, 0.5, 0.5))
+plot(p, lehr_estimate(days_var[[day_ind]][m1, m2], days_mean[[day_ind]][m1, m2], p),
+     main = "", xlab = "relative difference to detect", ty = "l", log = "y",
+     ylab = "number of samples", lwd = 2, xaxp = c(0.05, 0.4, 7))
+dev.off()
+
