@@ -122,3 +122,73 @@ plot(p, lehr_estimate(days_var[[day_ind]][m1, m2], days_mean[[day_ind]][m1, m2],
      ylab = "number of samples", lwd = 2, xaxp = c(0.05, 0.4, 7))
 dev.off()
 
+
+## Plot acf for daily data
+file_path <- file.path(fpath, paste0("sample/", "plot_acfs", ".pdf"))
+pdf(file_path, width = 8, height = 5.5)
+par(mfrow=c(2,3), mar = c(2, 2, 2, 1))
+for (j in 1:4) {
+  for (k in 1:4) {
+    if (j >= k) next
+    score_diff <- rowSums( Spois(models[[j]], obs) - Spois(models[[k]], obs))
+    acf(score_diff, main = "", lag.max = 16,
+        xlab = "", ylab = "")
+    title(paste0(mnames[j], " - ", mnames[k]), line = 0.3)
+  }
+}
+dev.off()
+
+
+# Print table for supplement
+diff_means_pois <- diff_vars_pois <- diff_names <- c()
+diff_means_quad <- diff_vars_quad <- c()
+for (j in 1:4) {
+  for (k in 1:4) {
+    if (j >= k) next
+    score_diff_pois <- rowSums( Spois(models[[j]], obs) - Spois(models[[k]], obs))
+    score_diff_quad <- rowSums( Squad(models[[j]], obs) - Squad(models[[k]], obs))
+    diff_means_pois <- c(diff_means_pois, mean(score_diff_pois))
+    diff_vars_pois <- c(diff_vars_pois, var(score_diff_pois))
+    diff_means_quad <- c(diff_means_quad, mean(score_diff_quad))
+    diff_vars_quad <- c(diff_vars_quad, var(score_diff_quad))
+    diff_names <- c(diff_names, paste(mnames[j], mnames[k], sep = "$-$"))
+  }
+}
+
+sample_size_table <- function(diff_means, diff_vars, diff_names, score_name,
+                              file_path, scaling = 1) {
+  c_string <- paste(rep("c", length(diff_means)), collapse = "")
+  begin <- paste0("\\begin{tabular}{l ", c_string, "}")
+  head <- paste(diff_names, collapse = " & ")
+  head <- paste0(score_name, " & ", head, " \\\\")
+  # Write teX code to file
+  write(begin, file_path)
+  write("\\hline ", file_path, append = T)
+  write(head, file_path, append = T)
+  write("\\hline ", file_path, append = T)
+  vals <- paste(sprintf("%.3f", diff_means), collapse = " & ")
+  vals <- paste0("Mean $m$ & ", vals, " \\\\")
+  write(vals, file_path, append = T)
+  vals <- paste(sprintf("%.3f", diff_vars), collapse = " & ")
+  vals <- paste0("Variance $s^2$ &", vals, " \\\\")
+  write(vals, file_path, append = T)
+  write("\\hline", file_path, append = T)
+  n <- 786
+  vals <- paste(sprintf("%.3f", scaling * sqrt(8 * diff_vars / n)), collapse = " & ")
+  vals <- paste0("$d_{", n, "}$ & ", vals, " \\\\")
+  write(vals, file_path, append = T)
+  n <- 5505
+  vals <- paste(sprintf("%.3f", scaling * sqrt(8 * diff_vars / n)), collapse = " & ")
+  vals <- paste0("$d_{", n, "}$ & ", vals, " \\\\")
+  write(vals, file_path, append = T)
+  write("\\hline", file_path, append = T)
+  write("\\end{tabular}", file_path, append = T)
+}
+
+file_path <- file.path(fpath, paste0("sample/", "table_sample_size_pois.tex"))
+sample_size_table(diff_means_pois, diff_vars_pois, diff_names, "Poisson score",
+                  file_path)
+file_path <- file.path(fpath, paste0("sample/", "table_sample_size_quad.tex"))
+sample_size_table(100 * diff_means_quad, 100 * diff_vars_quad, diff_names,
+                  "Quadratic score", file_path, scaling = 10)
+
