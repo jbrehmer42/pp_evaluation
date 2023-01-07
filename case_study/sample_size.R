@@ -123,9 +123,9 @@ plot(p, lehr_estimate(days_var[[day_ind]][m1, m2], days_mean[[day_ind]][m1, m2],
 dev.off()
 
 
-# Print table for supplement
-diff_means_pois <- diff_vars_pois <- diff_names_pois <- c()
-diff_means_quad <- diff_vars_quad <- diff_names_quad <- c()
+## Print table for supplement
+diff_means_pois <- diff_vars_pois <- diff_names_pois <- diff_ess_pois <- c()
+diff_means_quad <- diff_vars_quad <- diff_names_quad <- diff_ess_quad <- c()
 for (j in 1:4) {
   for (k in 1:4) {
     if (j >= k) next
@@ -145,6 +145,10 @@ for (j in 1:4) {
     } else {
       diff_names_quad <- c(diff_names_quad, paste(mnames[k], mnames[j], sep = "$-$"))
     }
+    diff_ess_pois <- c(diff_ess_pois, effective_sample_size(score_diff_pois,
+                                                            cutoff = 12))
+    diff_ess_quad <- c(diff_ess_quad, effective_sample_size(score_diff_quad,
+                                                            cutoff = 18))
   }
 }
 
@@ -224,3 +228,14 @@ file_path <- file.path(fpath, paste0("sample/", "plot_score_acf_pois", ".pdf"))
 plot_acf_daily(models, obs, Spois, file_path)
 file_path <- file.path(fpath, paste0("sample/", "plot_score_acf_quad", ".pdf"))
 plot_acf_daily(models, obs, Squad, file_path)
+
+
+## Effective sample size estimation
+effective_sample_size <- function(x, cutoff) {
+  # Effective sample size (ESS) following Thiebaux and Zwiers (1984)
+  rho <- acf(x, lag.max = cutoff, plot = FALSE)$acf
+  N <- length(x)
+  lags <- 1:cutoff
+  denomiator <- 1 + 2 * sum( (1 - lags/N) * rho[lags + 1] )
+  return(N / denomiator)
+}
