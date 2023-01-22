@@ -10,18 +10,20 @@ fpath <- "/media/myData/Plots"
 # Path for data
 # The files containing the forecasts and observations should
 # be located in this folder
-dpath <- "/media/myData/EQData"
+dpath <- "/media/myData/EQData_v2"
 ###
 ### Set to getwd() later
 
 # Set file names (default names)
 # The forecast model outputs are arrays with time in rows
 # and grid cells in the columns
-modelNames <- c("ETAS_LM.txt.xz", "ETES_FMC.txt.xz",
-                "STEP_LG.txt.xz", "Bayesian_corr_27_10.txt.xz")
+modelNames <- c("forecast_ETAS_LM_FP32.dat.xz",
+                "forecast_ETES_FCM_FP32.dat.xz",
+                "forecast_STEP_LG_FP32.dat.xz",
+                "forecast-ensemble_SMA_FP32.dat.xz")
 # Time stamps corresponding to model outputs
 # (rows of the model output data)
-timestampName <- "meta_rows.txt"
+timestampName <- "meta_rows_dates.csv"
 # Locations of grid cells corresponding to model outputs
 # (columns of the model output data)
 cellName <- "meta_column.csv"

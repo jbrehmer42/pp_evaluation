@@ -15,7 +15,12 @@ load_times <- function(filePath, lastday) {
   # lastday  - Last day for which forecasts can be
   #            evaluated.
   # Read time stamps from file
-  times <- read.table(filePath, col.names = c("DD", "MM", "YY", "H", "M", "S"))
+  raw_strings <- read.table(filePath, skip = 1, sep = ";")
+  # Convert time stamps to data frame of integers
+  times <- sapply(raw_strings,
+                  function (x) unlist(regmatches(x, gregexpr("(\\d+)", x))))
+  times <- as.data.frame(matrix(as.integer(times), ncol = 6, byrow = TRUE))
+  names(times) <-  c("YY", "MM", "DD", "H", "M", "S")
   # Filter out days with multiple model runs: Compute
   # index of days with only one model run. Only the
   # first time stamp of the model runs is retained
