@@ -67,10 +67,11 @@ load_cells <- function(filePath) {
   # Input values:
   # filePath - File path for the grid cells file
   # Read grid cell file
-  cells <- read.csv(filePath, header = F, col.names = c("LON", "LAT", "N"))
+  cells <- read.csv(filePath, header = FALSE, skip = 1,
+                    col.names = c("LON", "LAT"))
   # Start numbering the grid cells with 1 (just for
   # convenience and interpretability)
-  cells$N <- cells$N + 1
+  cells$N <- 1:dim(cells)[1]
   # Add x-y-coordinates for cells
   xvals <- sort(unique(cells$LON))
   yvals <- sort(unique(cells$LAT))
@@ -86,8 +87,14 @@ load_events <- function(filePath, times) {
   # filePath - File path for the events file
   # times    - Time stamps of testing period
   # Read events file
-  events <- read.table(filePath,
-                       col.names = c("YY", "MM", "DD", "H", "M", "S", "LAT", "LON", "DEP", "MAG"))
+  events <- read.csv(filePath, header = FALSE, skip = 1,
+                     col.names = c("time", "LAT", "LON", "DEP", "MAG"))
+  # Convert time stamps to data frame of integers
+  time_column <- sapply(events[1],
+                      function(x) unlist(regmatches(x, gregexpr("(\\d+)", x))))
+  time_df <- as.data.frame(matrix(as.numeric(time_column), ncol = 7, byrow = T))
+  names(time_df) <- c("YY", "MM", "DD", "H", "M", "S", "MS")
+  events <- cbind(time_df[1:6], events[-1])
   # Use only events with magnitude M >= 4
   # Using M >= 4 is equivalent to using M >= 3.95
   M4ind <- (events$MAG >= 4)

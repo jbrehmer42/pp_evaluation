@@ -10,7 +10,7 @@ fpath <- "/media/myData/Plots"
 # Path for data
 # The files containing the forecasts and observations should
 # be located in this folder
-dpath <- "/media/myData/EQData_v2"
+dpath <- "/media/myData/EQData"
 ###
 ### Set to getwd() later
 
@@ -26,9 +26,9 @@ modelNames <- c("forecast_ETAS_LM_FP32.dat.xz",
 timestampName <- "meta_rows_dates.csv"
 # Locations of grid cells corresponding to model outputs
 # (columns of the model output data)
-cellName <- "meta_column.csv"
+cellName <- "meta_columns_cells.csv"
 # Catalog of observed earthquakes
-eventsName <- "meta_catalogo.txt"
+eventsName <- "catalog.csv"
 
 # Load necessary packages
 library(Matrix)
