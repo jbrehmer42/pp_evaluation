@@ -25,6 +25,19 @@ plot_diff <- function(x, file_path, main) {
   dev.off()
 }
 
+## Effective sample size estimation
+effective_sample_size <- function(x, cutoff) {
+  # Effective sample size (ESS) following Thiebaux and Zwiers (1984)
+  rho <- acf(x, lag.max = cutoff, plot = FALSE)$acf
+  N <- length(x)
+  lags <- 1:cutoff
+  denomiator <- 1 + 2 * sum( (1 - lags/N) * rho[lags + 1] )
+  return(N / denomiator)
+}
+
+
+## Compute means and vars for score differences and
+## plot difference and acf for all pairs and all days
 days_mean <- list()
 days_var <- list()
 
@@ -84,7 +97,7 @@ legend("topright", legend = diff_names, col = diff_cols, lty = 1, lwd = 2)
 dev.off()
 
 
-## Plot for every model pair
+## Plot Lehr's estimate for every model pair
 p <- c(seq(0.02, 0.04, by = 0.001), seq(0.045, 0.1, by = 0.002),
        seq(0.11, 0.3, by = 0.01))
 
@@ -153,7 +166,7 @@ for (j in 1:4) {
 }
 
 sample_size_table <- function(diff_means, diff_vars, diff_names, score_name,
-                              file_path, scaling = 1) {
+                              ndays, file_path, scaling = 1) {
   diff_means <- abs(diff_means)
   c_string <- paste(rep("c", length(diff_means)), collapse = "")
   begin <- paste0("\\begin{tabular}{l ", c_string, "}")
@@ -172,12 +185,12 @@ sample_size_table <- function(diff_means, diff_vars, diff_names, score_name,
   vals <- paste0("Variance $s^2$ &", vals, " \\\\")
   write(vals, file_path, append = T)
   write("\\hline", file_path, append = T)
-  n <- 5505
+  n <- ndays
   vals <- paste(sprintf("%.3f", scaling * sqrt(8 * diff_vars[mean_order] / n)),
                 collapse = " & ")
   vals <- paste0("$d_{", n, "}$ & ", vals, " \\\\")
   write(vals, file_path, append = T)
-  n <- 786
+  n <- floor(ndays/7)
   vals <- paste(sprintf("%.3f", scaling * sqrt(8 * diff_vars[mean_order] / n)),
                 collapse = " & ")
   vals <- paste0("$d_{", n, "}$ & ", vals, " \\\\")
@@ -187,11 +200,11 @@ sample_size_table <- function(diff_means, diff_vars, diff_names, score_name,
 }
 
 file_path <- file.path(fpath, paste0("sample/", "table_sample_size_pois.tex"))
-sample_size_table(diff_means_pois, diff_vars_pois, diff_names_pois,
+sample_size_table(diff_means_pois, diff_vars_pois, diff_names_pois, ndays,
                   "Poisson score", file_path)
 file_path <- file.path(fpath, paste0("sample/", "table_sample_size_quad.tex"))
 sample_size_table(100 * diff_means_quad, 100 * diff_vars_quad, diff_names_quad,
-                  "Quadratic score", file_path, scaling = 10)
+                  ndays, "Quadratic score", file_path, scaling = 10)
 
 
 ## Plot ACF for daily data
@@ -230,12 +243,4 @@ file_path <- file.path(fpath, paste0("sample/", "plot_score_acf_quad", ".pdf"))
 plot_acf_daily(models, obs, Squad, file_path)
 
 
-## Effective sample size estimation
-effective_sample_size <- function(x, cutoff) {
-  # Effective sample size (ESS) following Thiebaux and Zwiers (1984)
-  rho <- acf(x, lag.max = cutoff, plot = FALSE)$acf
-  N <- length(x)
-  lags <- 1:cutoff
-  denomiator <- 1 + 2 * sum( (1 - lags/N) * rho[lags + 1] )
-  return(N / denomiator)
-}
+
