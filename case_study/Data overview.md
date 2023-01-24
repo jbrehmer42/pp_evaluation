@@ -29,7 +29,7 @@ Locations of grid cells corresponding to the model outputs files,
 i.e. entry j in this file specifies the grid cell for which the 
 model output (see model output files above) in column j was
 issued. Each entry gives the longitude and latitude of the center
-of a grid cell and a consecutive number. The edge length of all 
-grid cells is 0.1 degrees, so the centers full specify the cells.
+of a grid cell. The edge length of all grid cells is 0.1 degrees,
+so the centers fully specify the cells.
 
 
