@@ -1,4 +1,4 @@
-# ppeval
+# pp_evaluation
 
 This is the repository for the code of the paper
 
@@ -22,4 +22,5 @@ The folder **case_study** contains the following files to reproduce the case stu
 - *case_functions.R*
 - *Data overview.txt*
 
-The data will be made publicly available...
+The forecast data of OEF-Italy can be requested from Marcus Herrmann
+(marcus.herrmann *at* unina.it)
