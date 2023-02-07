@@ -8,6 +8,9 @@ Spois <- function(x, y)  -y * log(x) + x
 # Quadratic scoring function
 Squad <- function(x,y) (y - x)^2
 
+# Detectable difference estimate of Lehr (1992)
+lehr_estimate <- function(var, n) sqrt(8 * var / n)
+
 # Load time stamps of the model outputs
 load_times <- function(filePath, lastday) {
   # Input values:
@@ -334,4 +337,73 @@ neigh_mat <- function(cells, k) {
     mat[i, ] <- as.numeric(xind & yind)
   }
   return(mat)
+}
+
+calculate_means_and_vars <- function(models, obs) {
+  means_pois <- vars_pois <- names_pois <- c()
+  means_quad <- vars_quad <- names_quad <- c()
+  i <- 1
+  for (j in 1:4) {
+    for (k in 1:4) {
+      if (j >= k) next
+      score_diff_pois <- rowSums( Spois(models[[j]], obs) - Spois(models[[k]], obs))
+      score_diff_quad <- rowSums( Squad(models[[j]], obs) - Squad(models[[k]], obs))
+      means_pois[i] <- mean(score_diff_pois)
+      vars_pois[i] <- var(score_diff_pois)
+      means_quad[i] <- mean(score_diff_quad)
+      vars_quad[i] <- var(score_diff_quad)
+      if (means_pois[i] >= 0) {
+        names_pois[i] <- paste(mnames[j], mnames[k], sep = "$-$")
+      } else {
+        names_pois[i] <- paste(mnames[k], mnames[j], sep = "$-$")
+      }
+      if (means_quad[i] >= 0) {
+        names_quad[i] <- paste(mnames[j], mnames[k], sep = "$-$")
+      } else {
+        names_quad[i] <- paste(mnames[k], mnames[j], sep = "$-$")
+      }
+      i <- i + 1
+    }
+  }
+  return(list("means_pois" = means_pois,
+              "vars_pois" = vars_pois,
+              "names_pois" = names_pois,
+              "means_quad" = means_quad,
+              "vars_quad" = vars_quad,
+              "names_quad" = names_quad))
+}
+
+sample_size_table <- function(diff_means, diff_vars, diff_names, ndays,
+                              score_name, file_path, scaling = 1) {
+  diff_means <- abs(scaling^2 * diff_means)
+  diff_vars <- scaling^2 * diff_vars
+  c_string <- paste(rep("c", length(diff_means)), collapse = "")
+  begin <- paste0("\\begin{tabular}{l ", c_string, "}")
+  mean_order <- order(diff_means, decreasing = TRUE)
+  head <- paste(diff_names[mean_order], collapse = " & ")
+  head <- paste0(score_name, " & ", head, " \\\\")
+  # Write teX code to file
+  write(begin, file_path)
+  write("\\hline ", file_path, append = T)
+  write(head, file_path, append = T)
+  write("\\hline ", file_path, append = T)
+  vals <- paste(sprintf("%.3f", diff_means[mean_order]), collapse = " & ")
+  vals <- paste0("Mean $m$ & ", vals, " \\\\")
+  write(vals, file_path, append = T)
+  vals <- paste(sprintf("%.3f", diff_vars[mean_order]), collapse = " & ")
+  vals <- paste0("Variance $s^2$ &", vals, " \\\\")
+  write(vals, file_path, append = T)
+  write("\\hline", file_path, append = T)
+  n <- ndays
+  l_est <- lehr_estimate(diff_vars[mean_order], n)
+  vals <- paste(sprintf("%.3f", scaling * l_est), collapse = " & ")
+  vals <- paste0("$d_{", n, "}$ & ", vals, " \\\\")
+  write(vals, file_path, append = T)
+  n <- floor(ndays/7)
+  l_est <- lehr_estimate(diff_vars[mean_order], n)
+  vals <- paste(sprintf("%.3f", scaling * l_est), collapse = " & ")
+  vals <- paste0("$d_{", n, "}$ & ", vals, " \\\\")
+  write(vals, file_path, append = T)
+  write("\\hline", file_path, append = T)
+  write("\\end{tabular}", file_path, append = T)
 }
