@@ -111,7 +111,12 @@ for (i in 2:nmods) {
   diffMap(sdiff, cells, filePath)
 }
 
-## Plot ACF of score differences and compute detectable differences
+
+# Plot ACF of score differences
+file_path <- file.path(fpath, "plot_score_acf_pois.pdf")
+plot_score_diffs_acf(models, obs, Spois, file_path)
+file_path <- file.path(fpath, "plot_score_acf_quad.pdf")
+plot_score_diffs_acf(models, obs, Squad, file_path)
 
 # Create lateX tables with mean, variance, and detectable differences for all
 # model combinations
@@ -125,7 +130,7 @@ sample_size_table(diffs$means_quad, diffs$vars_quad, diffs$names_quad,
                   ndays, "Quadratic score", file_path, scaling = 10)
 
 
-## Plot map of aggregated score differences
+# Plot map of aggregated score differences
 # Compute neighborhood matrix
 k <- 5
 nmat <- neigh_mat(cells, k)
