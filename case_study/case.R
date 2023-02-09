@@ -120,13 +120,14 @@ plot_score_diffs_acf(models, obs, Squad, file_path)
 
 # Create lateX tables with mean, variance, and detectable differences for all
 # model combinations
-diffs <- calculate_means_and_vars(models, obs)
+pois_diffs <- calculate_means_and_vars(models, obs, Spois)
+quad_diffs <- calculate_means_and_vars(models, obs, Squad)
 
 file_path <- file.path(fpath, "table_sample_size_pois.tex")
-sample_size_table(diffs$means_pois, diffs$vars_pois, diffs$names_pois, ndays,
+sample_size_table(pois_diffs$means, pois_diffs$vars, pois_diffs$names, ndays,
                   "Poisson score", file_path)
 file_path <- file.path(fpath, "table_sample_size_quad.tex")
-sample_size_table(diffs$means_quad, diffs$vars_quad, diffs$names_quad,
+sample_size_table(quad_diffs$means, quad_diffs$vars, quad_diffs$names,
                   ndays, "Quadratic score", file_path, scaling = 10)
 
 

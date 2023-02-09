@@ -346,42 +346,32 @@ neigh_mat <- function(cells, k) {
 
 # Calculate mean and variance of the score differences for the computation
 # of the sample size table in sample_size_table
-calculate_means_and_vars <- function(models, obs) {
+calculate_means_and_vars <- function(models, obs, scoring_function) {
   # Input values:
-  # models    - List of model outputs matrices
-  # obs       - Observation matrix
-  means_pois <- vars_pois <- names_pois <- c()
-  means_quad <- vars_quad <- names_quad <- c()
+  # models            - List of model outputs matrices
+  # obs               - Observation matrix
+  # scoring_function  - Scoring function to compute score differences
+  means <- vars <- diff_names <- c()
   i <- 1
   for (j in 1:4) {
     for (k in 1:4) {
       if (j >= k) next
-      score_diff_pois <- rowSums( Spois(models[[j]], obs) - Spois(models[[k]], obs))
-      score_diff_quad <- rowSums( Squad(models[[j]], obs) - Squad(models[[k]], obs))
-      means_pois[i] <- mean(score_diff_pois)
-      vars_pois[i] <- var(score_diff_pois)
-      means_quad[i] <- mean(score_diff_quad)
-      vars_quad[i] <- var(score_diff_quad)
+      score_diff <- rowSums( scoring_function(models[[j]], obs) 
+                             - scoring_function(models[[k]], obs))
+      means[i] <- mean(score_diff)
+      vars[i] <- var(score_diff)
       # Adjust name of difference such that model with larger score comes first
-      if (means_pois[i] >= 0) {
-        names_pois[i] <- paste(mnames[j], mnames[k], sep = "$-$")
+      if (means[i] >= 0) {
+        diff_names[i] <- paste(mnames[j], mnames[k], sep = "$-$")
       } else {
-        names_pois[i] <- paste(mnames[k], mnames[j], sep = "$-$")
-      }
-      if (means_quad[i] >= 0) {
-        names_quad[i] <- paste(mnames[j], mnames[k], sep = "$-$")
-      } else {
-        names_quad[i] <- paste(mnames[k], mnames[j], sep = "$-$")
+        diff_names[i] <- paste(mnames[k], mnames[j], sep = "$-$")
       }
       i <- i + 1
     }
   }
-  return(list("means_pois" = means_pois,
-              "vars_pois" = vars_pois,
-              "names_pois" = names_pois,
-              "means_quad" = means_quad,
-              "vars_quad" = vars_quad,
-              "names_quad" = names_quad))
+  return(list("means" = means,
+              "vars" = vars,
+              "diff_names" = diff_names))
 }
 
 
