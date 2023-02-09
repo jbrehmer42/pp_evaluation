@@ -8,6 +8,10 @@ Spois <- function(x, y)  -y * log(x) + x
 # Quadratic scoring function
 Squad <- function(x,y) (y - x)^2
 
+# Detectable difference estimate of Lehr (1992)
+lehr_estimate <- function(var, n) sqrt(8 * var / n)
+
+
 # Load time stamps of the model outputs
 load_times <- function(filePath, lastday) {
   # Input values:
@@ -38,6 +42,7 @@ load_times <- function(filePath, lastday) {
   # Return new time stamps and index of corresponding rows
   return(list(times = times, tindex = tindex))
 }
+
 
 # Load forecast values of the models
 load_models <- function(filePaths, tindex) {
@@ -178,6 +183,7 @@ events2obs <- function(events, ndays, ncells) {
   return(obs)
 }
 
+
 # Print table of mean scores
 scores2teX <- function(scores_pois, scores_quad, mnames, filePath) {
   # Input values:
@@ -315,6 +321,7 @@ diffMap <- function(vals, cells, filePath, events = NULL, borders = T) {
   dev.off()
 }
 
+
 # Compute neighborhood matrix for spatial aggregation
 # (See Section D in the Supplement)
 neigh_mat <- function(cells, k) {
@@ -334,4 +341,124 @@ neigh_mat <- function(cells, k) {
     mat[i, ] <- as.numeric(xind & yind)
   }
   return(mat)
+}
+
+
+# Calculate mean and variance of the score differences for the computation
+# of the sample size table in sample_size_table
+calculate_means_and_vars <- function(models, obs, scoring_function) {
+  # Input values:
+  # models            - List of model outputs matrices
+  # obs               - Observation matrix
+  # scoring_function  - Scoring function to compute score differences
+  means <- vars <- diff_names <- c()
+  i <- 1
+  for (j in 1:4) {
+    for (k in 1:4) {
+      if (j >= k) next
+      score_diff <- rowSums( scoring_function(models[[j]], obs) 
+                             - scoring_function(models[[k]], obs))
+      means[i] <- mean(score_diff)
+      vars[i] <- var(score_diff)
+      # Adjust name of difference such that model with larger score comes first
+      if (means[i] >= 0) {
+        diff_names[i] <- paste(mnames[j], mnames[k], sep = "$-$")
+      } else {
+        diff_names[i] <- paste(mnames[k], mnames[j], sep = "$-$")
+      }
+      i <- i + 1
+    }
+  }
+  return(list("means" = means,
+              "vars" = vars,
+              "diff_names" = diff_names))
+}
+
+
+# Print table of mean and variance of score differences and their
+# detectable differences
+sample_size_table <- function(diff_means, diff_vars, diff_names, ndays,
+                              score_name, file_path, scaling = 1) {
+  # Input values:
+  # diff_means  - Means of score differences
+  # diff_vars   - Variances of score differences
+  # diff_names  - LateX strings of score differences
+  # ndays       - Number of days in testing period
+  # score_name  - Name of the used scoring function
+  # file_path   - File path for .tex file
+  # scaling     - Factor to scale the table values (optional)
+  diff_means <- abs(scaling^2 * diff_means)
+  diff_vars <- scaling^2 * diff_vars
+  c_string <- paste(rep("c", length(diff_means)), collapse = "")
+  begin <- paste0("\\begin{tabular}{l ", c_string, "}")
+  mean_order <- order(diff_means, decreasing = TRUE)
+  head <- paste(diff_names[mean_order], collapse = " & ")
+  head <- paste0(score_name, " & ", head, " \\\\")
+  # Write teX code to file
+  write(begin, file_path)
+  write("\\hline ", file_path, append = T)
+  write(head, file_path, append = T)
+  write("\\hline ", file_path, append = T)
+  # Row with means
+  vals <- paste(sprintf("%.3f", diff_means[mean_order]), collapse = " & ")
+  vals <- paste0("Mean $m$ & ", vals, " \\\\")
+  write(vals, file_path, append = T)
+  # Row with variances
+  vals <- paste(sprintf("%.3f", diff_vars[mean_order]), collapse = " & ")
+  vals <- paste0("Variance $s^2$ &", vals, " \\\\")
+  write(vals, file_path, append = T)
+  write("\\hline", file_path, append = T)
+  # Row with detectable differences for full sample
+  n <- ndays
+  l_est <- lehr_estimate(diff_vars[mean_order], n)
+  vals <- paste(sprintf("%.3f", scaling * l_est), collapse = " & ")
+  vals <- paste0("$d_{", n, "}$ & ", vals, " \\\\")
+  write(vals, file_path, append = T)
+  # Row with detectable differences for weekly sample
+  n <- floor(ndays/7)
+  l_est <- lehr_estimate(diff_vars[mean_order], n)
+  vals <- paste(sprintf("%.3f", scaling * l_est), collapse = " & ")
+  vals <- paste0("$d_{", n, "}$ & ", vals, " \\\\")
+  write(vals, file_path, append = T)
+  write("\\hline", file_path, append = T)
+  write("\\end{tabular}", file_path, append = T)
+}
+
+
+# Plot ACF for score differences of all model combinations
+plot_score_diffs_acf <- function(models, obs, scoring_function, file_path) {
+  # Input values:
+  # models            - List of model outputs matrices
+  # obs               - Observation matrix
+  # scoring_function  - Scoring function to compute score differences
+  # file_path         - File path for .pdf file
+  diff_means <- diff_names <- c()
+  diffs <- list()
+  i <- 1
+  for (j in 1:4) {
+    for (k in 1:4) {
+      if (j >= k) next
+      score_diff <- rowSums( scoring_function(models[[j]], obs) 
+                             - scoring_function(models[[k]], obs))
+      diffs[[i]] <- score_diff
+      diff_means[i] <- mean(score_diff)
+      # Adjust name of difference such that model with larger score comes first
+      if (diff_means[i] >= 0) {
+        diff_names[i] <- paste(mnames[j], mnames[k], sep = "-")
+      } else {
+        diff_names[i] <- paste(mnames[k], mnames[j], sep = "-")
+      }
+      i <- i + 1
+    }
+  }
+  # Sort by size of mean score difference (same order as in function
+  # sample_size_table for consistency)
+  mean_order <- order(abs(diff_means), decreasing = TRUE)
+  pdf(file_path, width = 8, height = 5)
+  par(mfrow=c(2,3), mar = c(2, 2, 2, 1))
+  for (i in mean_order) {
+    acf(diffs[[i]], main = "", lag.max = 16, xlab = "", ylab = "")
+    title(diff_names[i], line = 0.3)
+  }
+  dev.off()
 }
