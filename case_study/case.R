@@ -17,18 +17,18 @@ dpath <- "/media/myData/EQData"
 # Set file names (default names)
 # The forecast model outputs are arrays with time in rows
 # and grid cells in the columns
-modelNames <- c("forecast_ETAS_LM_FP32.dat.xz",
-                "forecast_ETES_FCM_FP32.dat.xz",
-                "forecast_STEP_LG_FP32.dat.xz",
-                "forecast-ensemble_SMA_FP32.dat.xz")
+model_files <- c("forecast_ETAS_LM_FP32.dat.xz",
+                 "forecast_ETES_FCM_FP32.dat.xz",
+                 "forecast_STEP_LG_FP32.dat.xz",
+                 "forecast-ensemble_SMA_FP32.dat.xz")
 # Time stamps corresponding to model outputs
 # (rows of the model output data)
-timestampName <- "meta_rows_dates.csv"
+time_stamps_file <- "meta_rows_dates.csv"
 # Locations of grid cells corresponding to model outputs
 # (columns of the model output data)
-cellName <- "meta_columns_cells.csv"
+cell_file <- "meta_columns_cells.csv"
 # Catalog of observed earthquakes
-eventsName <- "catalog.csv"
+events_file <- "catalog.csv"
 
 # Load necessary packages
 library(Matrix)
@@ -39,45 +39,45 @@ library(maps)
 source(file.path(rpath, "case_functions.R"))
 
 # Set model names and their colors
-mnames <- c("LM", "FMC", "LG", "SMA")
-mcols <- c("black", "darkgreen", "blue", "red")
+model_names <- c("LM", "FMC", "LG", "SMA")
+model_colors <- c("black", "darkgreen", "blue", "red")
 # Define last day where model evaluation is possible (needed
 # because we treat 7-day periods)
-lastday <- list(DD = 20, MM = 5, YY = 2020)
+last_day <- list(DD = 20, MM = 5, YY = 2020)
 
 
 ###############
 ## Load data ##
 
 # Load time stamps for the models
-filePath <- file.path(dpath, timestampName)
-res <- load_times(filePath, lastday)
+file_path <- file.path(dpath, time_stamps_file)
+res <- load_times(file_path, last_day)
 times <- res$times
 
 # Load list of model forecasts
-filePaths <- file.path(dpath, modelNames)
-models <- load_models(filePaths, res$tindex)
+file_paths <- file.path(dpath, model_files)
+models <- load_models(file_paths, res$tindex)
 nmods <- length(models)
 
 # Load the grid cell data (testing region)
-filePath <- file.path(dpath, cellName)
-cells <- load_cells(filePath)
+file_path <- file.path(dpath, cell_file)
+cells <- load_cells(file_path)
 
 # Load data frame of M4+ events
-filePath <- file.path(dpath, eventsName)
-events <- load_events(filePath, times)
+file_path <- file.path(dpath, events_file)
+events <- load_events(file_path, times)
 
 # Filter the M4+ events for testing region
-events <- filterRegion(events, cells)
+events <- filter_region(events, cells)
 
 # Convert events data frame to observation matrix of the
 # same format as the forecast matrices in models. Thus 
 # any scoring function S can be applied to the components
-# of these matrices. For example S( models[[i]], obs )
+# of these matrices. For example S( models[[i]], observations )
 # gives a matrix of scores for all grid cells and days
 ncells <- dim(cells)[1]
 ndays <- dim(times)[1]
-obs <- events2obs(events, ndays, ncells)
+observations <- events2obs(events, ndays, ncells)
 
 
 ####################
@@ -87,41 +87,42 @@ obs <- events2obs(events, ndays, ncells)
 # and the Poisson scoring function, see Section 5.2
 scores_pois <- scores_quad <- matrix(0, nrow = ndays, ncol = nmods)
 for (i in 1:nmods) {
-  scores_pois[ ,i] <- rowSums( Spois(models[[i]], obs) )
-  scores_quad[ ,i] <- rowSums( Squad(models[[i]], obs) )
+  scores_pois[ ,i] <- rowSums( Spois(models[[i]], observations) )
+  scores_quad[ ,i] <- rowSums( Squad(models[[i]], observations) )
 }
 
 # Create lateX table for the overall mean scores
-filePath <- file.path(fpath, "score_table.tex")
-scores2teX(scores_pois, scores_quad, mnames, filePath)
+file_path <- file.path(fpath, "score_table.tex")
+scores2teX(scores_pois, scores_quad, model_names, file_path)
 
 # Create plot of daily scores (Poisson)
-filePath <- file.path(fpath, "plot_pois_time_log.pdf")
-plotScores(scores_pois, times, mnames, mcols, filePath, events = events) 
+file_path <- file.path(fpath, "plot_pois_time_log.pdf")
+plot_scores(scores_pois, times, model_names, model_colors, file_path, events = events) 
 
 # Create plot of daily scores (Quadratic)
-filePath <- file.path(fpath, "plot_quad_time_log.pdf")
-plotScores(scores_quad, times, mnames, mcols, filePath, events = events) 
+file_path <- file.path(fpath, "plot_quad_time_log.pdf")
+plot_scores(scores_quad, times, model_names, model_colors, file_path, events = events) 
 
 
 # Plot maps of score differences
 for (i in 2:nmods) {
-  sdiff <- colMeans( Spois(models[[1]], obs) - Spois(models[[i]], obs) )
-  filePath <- file.path(fpath, paste0("map_score_diff_1", i, ".pdf"))
-  diffMap(sdiff, cells, filePath)
+  score_diff <- colMeans( Spois(models[[1]], observations)
+                          - Spois(models[[i]], observations) )
+  file_path <- file.path(fpath, paste0("map_score_diff_1", i, ".pdf"))
+  plot_diffs_map(score_diff, cells, file_path)
 }
 
 
 # Plot ACF of score differences
 file_path <- file.path(fpath, "plot_score_acf_pois.pdf")
-plot_score_diffs_acf(models, obs, Spois, file_path)
+plot_score_diffs_acf(models, observations, Spois, file_path)
 file_path <- file.path(fpath, "plot_score_acf_quad.pdf")
-plot_score_diffs_acf(models, obs, Squad, file_path)
+plot_score_diffs_acf(models, observations, Squad, file_path)
 
 # Create lateX tables with mean, variance, and detectable differences for all
 # model combinations
-pois_diffs <- calculate_means_and_vars(models, obs, Spois)
-quad_diffs <- calculate_means_and_vars(models, obs, Squad)
+pois_diffs <- calculate_means_and_vars(models, observations, Spois)
+quad_diffs <- calculate_means_and_vars(models, observations, Squad)
 
 file_path <- file.path(fpath, "table_sample_size_pois.tex")
 sample_size_table(pois_diffs$means, pois_diffs$vars, pois_diffs$names, ndays,
@@ -141,11 +142,12 @@ for (i in 1:nmods) {
   models[[i]] <- as.matrix( models[[i]] %*% nmat )
   gc()
 }
-obs <- obs %*% nmat
+observations <- observations %*% nmat
 
 for (i in 2:nmods) {
-  sdiff <- colMeans( Spois(models[[1]], obs) - Spois(models[[i]], obs) )
-  filePath <- file.path(fpath, paste0("map_score_diff_1", i, "_agg", k, ".pdf"))
-  diffMap(sdiff, cells, filePath)
+  score_diff <- colMeans( Spois(models[[1]], observations)
+                          - Spois(models[[i]], observations) )
+  file_path <- file.path(fpath, paste0("map_score_diff_1", i, "_agg", k, ".pdf"))
+  plot_diffs_map(score_diff, cells, file_path)
 }
 
