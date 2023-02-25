@@ -62,16 +62,16 @@ forecast_index <- 0:5
 
 # Do 2D plot of intensity forecasts
 file_path <- file.path(fpath, "plot_intensities.pdf")
-plotIntensities(forecast_functions, file_path)
+plot_intensities(forecast_functions, file_path)
 
 
-## 1) Scoring function S1
+## 1) Scoring function 1 (Example 4)
 
 # Save mean score differences of each experiment for boxplot
 score_diffs1 <- list()
 
 ## 1.1) Poisson point process
-res <- experiment("Poisson", ScoreIntensity1, forecast_functions, forecast_norms, M, N)
+res <- experiment("Poisson", S_intensity1, forecast_functions, forecast_norms, M, N)
 # Print the DM table
 file_path <- file.path(fpath, "DM_table_s1_Poisson.tex")
 array2teX(res$DM, forecast_index, file_path, color = table_color)
@@ -80,7 +80,7 @@ score_diffs1[[1]] <- res$Scores[ ,2:n_forecast] - res$Scores[ ,rep(1, n_forecast
 
 
 ## 1.2) Determinantal point process
-res <- experiment("DPP", ScoreIntensity1, forecast_functions, forecast_norms, M, N)
+res <- experiment("DPP", S_intensity1, forecast_functions, forecast_norms, M, N)
 # Print the DM table
 file_path <- file.path(fpath, "DM_table_s1_DPP.tex")
 array2teX(res$DM, forecast_index, file_path, color = table_color)
@@ -89,7 +89,7 @@ score_diffs1[[2]] <- res$Scores[ ,2:n_forecast] - res$Scores[ ,rep(1, n_forecast
 
 
 ## 1.3) Log-Gaussian Cox process
-res <- experiment("LGCP", ScoreIntensity1, forecast_functions, forecast_norms, M, N)
+res <- experiment("LGCP", S_intensity1, forecast_functions, forecast_norms, M, N)
 # Print the DM table
 file_path <- file.path(fpath, "DM_table_s1_LGCP.tex")
 array2teX(res$DM, forecast_index, file_path, color = table_color)
@@ -98,7 +98,7 @@ score_diffs1[[3]] <- res$Scores[ ,2:n_forecast] - res$Scores[ ,rep(1, n_forecast
 
 
 ## 1.4) Thomas cluster process
-res <- experiment("Thomas", ScoreIntensity1, forecast_functions, forecast_norms, M, N)
+res <- experiment("Thomas", S_intensity1, forecast_functions, forecast_norms, M, N)
 # Print the DM table
 file_path <- file.path(fpath, "DM_table_s1_Thomas.tex")
 array2teX(res$DM, forecast_index, file_path, color = table_color)
@@ -111,10 +111,10 @@ file_path <- file.path(fpath, "boxplot_intensity_s1.pdf")
 diffmin <- sapply(score_diffs1, min)
 diffmax <- sapply(score_diffs1, max)
 ylim <- rep(list(c(min(diffmin), max(diffmax))), 4)
-myBoxplot(score_diffs1, 1:5, model_names, ylim, file_path)
+boxplot_score(score_diffs1, 1:5, model_names, ylim, file_path)
 
 
-## 2) Scoring function S2
+## 2) Scoring function 2 (Proposition 3)
 
 # Save mean score differences of each experiment for boxplot
 score_diffs2 <- list()
@@ -123,7 +123,7 @@ score_diffs2 <- list()
 DM_results <- list()
 
 ## 2.1) Poisson point process
-res <- experiment("Poisson", ScoreIntensity2, forecast_functions, forecast_norms, M, N)
+res <- experiment("Poisson", S_intensity2, forecast_functions, forecast_norms, M, N)
 # Print the DM table
 file_path <- file.path(fpath, "DM_table_s2_Poisson.tex")
 array2teX(res$DM, forecast_index, file_path, color = table_color)
@@ -133,7 +133,7 @@ score_diffs2[[1]] <- res$Scores[ ,2:n_forecast] - res$Scores[ ,rep(1, n_forecast
 
 
 ## 2.2) Determinantal point process
-res <- experiment("DPP", ScoreIntensity2, forecast_functions, forecast_norms, M, N)
+res <- experiment("DPP", S_intensity2, forecast_functions, forecast_norms, M, N)
 # Print the DM table
 file_path <- file.path(fpath, "DM_table_s2_DPP.tex")
 array2teX(res$DM, forecast_index, file_path, color = table_color)
@@ -143,7 +143,7 @@ score_diffs2[[2]] <- res$Scores[ ,2:n_forecast] - res$Scores[ ,rep(1, n_forecast
 
 
 ## 2.3) Log-Gaussian Cox process
-res <- experiment("LGCP", ScoreIntensity2, forecast_functions, forecast_norms, M, N)
+res <- experiment("LGCP", S_intensity2, forecast_functions, forecast_norms, M, N)
 # Print the DM table
 file_path <- file.path(fpath, "DM_table_s2_LGCP.tex")
 array2teX(res$DM, forecast_index, file_path, color = table_color)
@@ -153,7 +153,7 @@ score_diffs2[[3]] <- res$Scores[ ,2:n_forecast] - res$Scores[ ,rep(1, n_forecast
 
 
 ## 2.4) Thomas cluster process
-res <- experiment("Thomas", ScoreIntensity2, forecast_functions, forecast_norms, M, N)
+res <- experiment("Thomas", S_intensity2, forecast_functions, forecast_norms, M, N)
 # Print the DM table
 file_path <- file.path(fpath, "DM_table_s2_Thomas.tex")
 array2teX(res$DM, forecast_index, file_path, color = table_color)
@@ -167,7 +167,7 @@ file_path <- file.path(fpath, "boxplot_intensity_s2.pdf")
 diffmin <- sapply(score_diffs2, min)
 diffmax <- sapply(score_diffs2, max)
 ylim <- rep(list(c(min(diffmin), max(diffmax))), 4)
-myBoxplot(score_diffs2, 1:5, model_names, ylim, file_path)
+boxplot_score(score_diffs2, 1:5, model_names, ylim, file_path)
 
 
 ## 3) Grid cell approximation
@@ -178,7 +178,8 @@ n_partition <- 2^(1:6)
 # Compute grid cell forecasts for all values of n
 forecast_cell_integrals <- list()
 for (i in 1:n_forecast) {
-  forecast_cell_integrals[[i]] <- lapply(n_partition, function(k) cellIntegrals(forecast_functions[[i]], k))
+  integral_fun <- function(k) cell_integrals(forecast_functions[[i]], k)
+  forecast_cell_integrals[[i]] <- lapply(n_partition, integral_fun)
 }
 
 # Save the DM results for each experiment and all values of n
@@ -189,18 +190,23 @@ DM_cells <- list()
 forecast_base <- 1
   
 ## 3.1) Poisson point process
-DM_cells[[1]] <- experiment_cells("Poisson", forecast_cell_integrals, n_partition, forecast_base, M, N)
+DM_cells[[1]] <- experiment_cells("Poisson", forecast_cell_integrals,
+                                  n_partition, forecast_base, M, N)
 
 ## 3.2) Determinantal point process
-DM_cells[[2]] <- experiment_cells("DPP", forecast_cell_integrals, n_partition, forecast_base, M, N)
+DM_cells[[2]] <- experiment_cells("DPP", forecast_cell_integrals, n_partition,
+                                  forecast_base, M, N)
 
 ## 3.3) Log-Gaussian Cox process
-DM_cells[[3]] <- experiment_cells("LGCP", forecast_cell_integrals, n_partition, forecast_base, M, N)
+DM_cells[[3]] <- experiment_cells("LGCP", forecast_cell_integrals, n_partition,
+                                  forecast_base, M, N)
 
 ## 3.4) Thomas cluster process
-DM_cells[[4]] <- experiment_cells("Thomas", forecast_cell_integrals, n_partition, forecast_base, M, N)
+DM_cells[[4]] <- experiment_cells("Thomas", forecast_cell_integrals,
+                                  n_partition, forecast_base, M, N)
 
 
 ## Create plot for DM frequency convergence
 file_path <- file.path(fpath, "plot_DM_convergence.pdf")
-plotDMconv(DM_cells, DM_results, 1:6, forecast_base, model_names, file_path)
+plot_DM_convergence(DM_cells, DM_results, 1:6, forecast_base, model_names,
+                    file_path)

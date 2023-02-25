@@ -60,14 +60,15 @@ forecast_index <- 1:5
 
 # Plot of product densities
 file_path <- file.path(fpath, "plot_product_densities.pdf")
-plotProduct(forecast_functions, file_path)
+plot_product_densities(forecast_functions, file_path)
 
 # Save mean scores of each experiment for boxplot
 scores <- list()
 
 
 ## 1) Log-Gaussian Cox process
-res <- experiment("homLGCP", ScoreProductDensity, forecast_functions, forecast_norms, M, N)
+res <- experiment("homLGCP", S_product_density, forecast_functions,
+                  forecast_norms, M, N)
 # Print the DM table
 file_path <- file.path(fpath, "DM_table_prod_LGCP.tex")
 array2teX(res$DM, forecast_index, file_path, color = table_color)
@@ -75,7 +76,8 @@ scores[[1]] <- res$Scores
 
 
 ## 2) Poisson point process
-res <- experiment("homPoisson", ScoreProductDensity, forecast_functions, forecast_norms, M, N)
+res <- experiment("homPoisson", S_product_density, forecast_functions,
+                  forecast_norms, M, N)
 # Print the DM table
 file_path <- file.path(fpath, "DM_table_prod_Poisson.tex")
 array2teX(res$DM, forecast_index, file_path, color = table_color)
@@ -83,7 +85,8 @@ scores[[2]] <- res$Scores
 
 
 ## 3) Determinantal point process
-res <- experiment("homDPP", ScoreProductDensity, forecast_functions, forecast_norms, M, N)
+res <- experiment("homDPP", S_product_density, forecast_functions,
+                  forecast_norms, M, N)
 # Print the DM table
 file_path <- file.path(fpath, "DM_table_prod_DPP.tex")
 array2teX(res$DM, forecast_index, file_path, color = table_color)
@@ -98,4 +101,5 @@ forecast_names <- rep(list(paste0("f", 1:5)), 3)
 for (i in 1:3) {
   forecast_names[[i]][2*(i-1)+1] <- paste0("f", 2*(i-1)+1, " (true)")
 }
-myBoxplot(scores, forecast_names , model_names, ylim, file_path, zline = F)
+boxplot_score(scores, forecast_names , model_names, ylim, file_path,
+              zero_line = FALSE)
