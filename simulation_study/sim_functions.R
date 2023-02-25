@@ -2,9 +2,9 @@
 ## Simulation study - Auxiliary functions ##
 
 # Scoring function S1 (intensity)
-# Defined in Example 3.5
+# Defined in Example 4
 S1_const <- 0.1
-ScoreIntensity1 <- function(fun, norm, ppat) {
+S_intensity1 <- function(fun, norm, ppat) {
   # Input values:
   # fun  - Intensity function
   # norm - Integral of fun
@@ -18,8 +18,8 @@ ScoreIntensity1 <- function(fun, norm, ppat) {
 }
 
 # Scoring function S2 (intensity)
-# Defined in Proposition 5.1
-ScoreIntensity2 <- function(fun, norm, ppat) {
+# Defined in Proposition 3
+S_intensity2 <- function(fun, norm, ppat) {
   # Input values:
   # fun  - Intensity function
   # norm - Integral of fun
@@ -33,19 +33,19 @@ ScoreIntensity2 <- function(fun, norm, ppat) {
 }
 
 # Scoring function for the product density
-# Defined in Example B.6
+# Defined in Example S4
 S_const <- 1e-5
-ScoreProductDensity <- function(fun, norm, ppat) {
+S_product_density <- function(fun, norm, ppat) {
   # Input values:
   # fun  - Function on [0,\infty), called \rho_0 in
-  #        Example B.6
+  #        Example S4
   # norm - Integral of the product density which
   #        corresponds to fun
   # ppat - Point pattern (class ppp)
   if (ppat$n > 1) {
-    dist <- pairdist(ppat)   # compute all distances
-    dist <- as.vector(dist[upper.tri(dist)])
-    sspa <- - log( fun(dist) ) + log(norm)
+    distances <- pairdist(ppat)   # compute pairwise distances
+    distances <- as.vector(distances[upper.tri(distances)])
+    sspa <- - log( fun(distances) ) + log(norm)
     score <- S_const * ( ppat$n * (ppat$n - 1) - norm )^2 + sum(sspa)
   } else {
     score <- S_const * norm^2
@@ -55,14 +55,14 @@ ScoreProductDensity <- function(fun, norm, ppat) {
 
 # Scoring function for the grid cell forecasts (S_cell)
 # Defined in Equation (14)
-ScoreCells <- function(cells, counts) {
+S_cell <- function(cells, counts) {
   # Input values:
   # cells  - List of forecast values for cells
   # counts - List of cell count
   # Each list element contains forecasts and counts
   # for one value of n, i.e. one partition
-  ScorePoisson <- function(x,y) sum(x - y * log(x))
-  score <- mapply(ScorePoisson, cells, counts)
+  Spois <- function(x,y) sum(x - y * log(x))
+  score <- mapply(Spois, cells, counts)
   return(score)
 }
 
@@ -89,7 +89,7 @@ integrate4D <- function(fun, tol = 1e-5, ...) {
 
 
 # Simulate realizations of the point processes
-simu <- function(name, N) {
+simulate_pp <- function(name, N) {
   # This function wraps the simulation routines for the
   # four inhomogeneous and  the three homogeneous point
   # process models
@@ -104,56 +104,63 @@ simu <- function(name, N) {
     dat <- lapply(dat, f0thin)
   }
   if (name == "LGCP") dat <- rLGCP(LGCPcov, LGCPmu,
-                                   param = list(var = LGCPvar, scale = LGCPscale), nsim = N)
+                                   param = list(var = LGCPvar, scale = LGCPscale),
+                                   nsim = N)
   if (name == "Thomas") dat <- rThomas(TPPkappa, TPPscale, TPPmu, nsim = N)
   if (name == "homLGCP") dat <- rLGCP(LGCPcov, LGCPmu,
-                                      param = list(var = LGCPvar, scale = LGCPscale), nsim = N)
+                                      param = list(var = LGCPvar, scale = LGCPscale),
+                                      nsim = N)
   if (name == "homPoisson") dat <- rpoispp(lambda, nsim = N)
-  if (name == "homDPP") dat <- simulate( dppGauss(lambda = lambda, alpha = DPPscale, d = 2), nsim = N)
+  if (name == "homDPP") dat <- simulate(dppGauss(lambda = lambda, alpha = DPPscale, d = 2),
+                                        nsim = N)
   return(dat)
 }
 
 # Compute the results of Diebold-Mariano (DM) tests
-DMmatrix <- function(s, alpha) {
+DM_matrix <- function(scores, alpha) {
   # Input values:
-  # s     - Array of realized scores. Columns are forecasts,
-  #         rows are realizations (nrow is the sample size)
-  # alpha - Level of the DM test
-  n <- dim(s)[1]
-  ncol <- dim(s)[2]
-  diffs <- apply(s, 1, function(x) outer(x, x, "-"))
-  meandiffs <- rowMeans(diffs)
-  vardiffs <- apply(diffs, 1, function(x) var(x))
+  # scores - Array of realized scores. Columns are forecasts,
+  #          rows are realizations (nrow is the sample size)
+  # alpha  - Level of the DM test
+  n <- dim(scores)[1]
+  ncol <- dim(scores)[2]
+  score_diffs <- apply(scores, 1, function(x) outer(x, x, "-"))
+  mean_diffs <- rowMeans(score_diffs)
+  var_diffs <- apply(score_diffs, 1, function(x) var(x))
   # Check whether diffs are significantly far from zero
-  logdiffs <- (meandiffs < qnorm(alpha) * sqrt(vardiffs/n))
+  sign_diffs <- (mean_diffs < qnorm(alpha) * sqrt(var_diffs/n))
   # Convert to matrix
-  return(matrix(logdiffs, ncol = ncol))
+  return(matrix(sign_diffs, ncol = ncol))
 }
 
 # Produces one simulation experiment as described in Section 4
-# and Section C of the Supplement
-experiment <- function(phi, scoringfun, fcast_funs, fcast_norm, M, N) {
+# and Section S3 of the Supplement
+experiment <- function(phi, scoring_function, forecast_functions,
+                       forecast_norms, M, N) {
   # Input values:
-  # phi        - Name of point process model for simulation
-  # scoringfun - Scoring function for intensity measure or product
-  #              density
-  # fcast_funs - List of forecasts
-  # fcast_norm - List of integrals corresponding to fcast_funs
-  # M          - Number of repetitions
-  # N          - Sample size
-  nfcast <- length(fcast_funs)
-  scores <- matrix(0, nrow = M, ncol = nfcast)
-  scores_DM <- array(0, dim = c(nfcast, nfcast, M))
+  # phi                - Name of point process model for simulation
+  # scoring_function   - Scoring function for intensity measure or product
+  #                      density
+  # forecast_functions - List of forecasts
+  # forecast_norms     - List of integrals corresponding to forecast_functions
+  # M                  - Number of repetitions
+  # N                  - Sample size
+  n_forecast <- length(forecast_functions)
+  scores <- matrix(0, nrow = M, ncol = n_forecast)
+  scores_DM <- array(0, dim = c(n_forecast, n_forecast, M))
   for (j in 1:M) {
     # Simulate N realizations of Phi
-    dat <- simu(phi, N)
-    s <- matrix(0, nrow = N, ncol = nfcast)
+    dat <- simulate_pp(phi, N)
+    s <- matrix(0, nrow = N, ncol = n_forecast)
     # Scores for this sample
-    for (i in 1:nfcast) s[ ,i] <- sapply(dat, FUN = scoringfun, fun = fcast_funs[[i]], norm = fcast_norm[i])
+    for (i in 1:n_forecast) {
+      s[ ,i] <- sapply(dat, FUN = scoring_function,
+                       fun = forecast_functions[[i]], norm = forecast_norms[i])
+    }
     # Mean scores
     scores[j, ] <- colMeans(s)
     # Restults of DM tests for this sample
-    scores_DM[ , ,j] <- DMmatrix(s, alpha)
+    scores_DM[ , ,j] <- DM_matrix(s, alpha)
   }
   # Mean results of DM tests over all repetitions
   DM <- apply(scores_DM, c(1,2), "mean")
@@ -161,34 +168,37 @@ experiment <- function(phi, scoringfun, fcast_funs, fcast_norm, M, N) {
 }
 
 # Produce one simulation experiment for the cell approximation
-# as described in Section C.1 of the Supplement
-experiment_cells <- function(phi, fcast_cell, nset, fbase, M, N) {
+# as described in Section S3.1 of the Supplement
+experiment_cells <- function(phi, forecast_cell_integrals, n_partition,
+                             forecast_base, M, N) {
   # Input values:
-  # phi        - Name of point process model for simulation
-  # fcast_cell - list of arrays which contain the cell forecasts
-  # nset       - number of intervals in the partition of each axis
-  # fbase      - Index of the forecast for which the convergence of
-  #              the preferring probabilities should be studied
-  # M          - Number of repetitions
-  # N          - Sample size
-  nfcast <- length(fcast_cell)
-  ngrid <- length(nset)
-  cells_DM <- array(0, dim = c(nfcast-1, ngrid, M))
+  # phi                     - Name of point process model for simulation
+  # forecast_cell_integrals - list of arrays which contain the cell forecasts
+  # n_partition             - number of intervals in the partition of each axis
+  # forecast_base           - Index of the forecast for which the convergence
+  #                           of the preferring probabilities should be studied
+  # M                       - Number of repetitions
+  # N                       - Sample size
+  n_forecast <- length(forecast_cell_integrals)
+  n_grid <- length(n_partition)
+  cells_DM <- array(0, dim = c(n_forecast-1, n_grid, M))
   for (j in 1:M) {
     # Simulate N realizations from Phi
-    dat <- simu(phi, N)
-    s <- array(0, dim = c(N, nfcast, ngrid))
-    nvals <- rep(nset, each = length(dat))
+    dat <- simulate_pp(phi, N)
+    s <- array(0, dim = c(N, n_forecast, n_grid))
+    n_vals <- rep(n_partition, each = length(dat))
     # Count number of points in each grid cell
-    count_list <- mapply(cellCount, dat, nvals, USE.NAMES = F)
-    count_list <- split(count_list, rep(1:length(dat), ngrid))
+    count_list <- mapply(cell_counts, dat, n_vals, USE.NAMES = F)
+    count_list <- split(count_list, rep(1:length(dat), n_grid))
     # Scores for this sample
-    for (i in 1:nfcast) {
-        s[ , i, ] <- t( sapply(count_list, FUN = ScoreCells, cells = fcast_cell[[i]]) )
+    for (i in 1:n_forecast) {
+        s[ , i, ] <- t( sapply(count_list, FUN = S_cell,
+                               cells = forecast_cell_integrals[[i]]) )
     }
     # Results of DM tests for this sample. Only the DM test which
-    # compares the forecast fbase to its competitors is saved
-    cells_DM[ , ,j] <- apply(s, 3, FUN = function(x) DMmatrix(x, alpha = alpha)[fbase, -fbase])
+    # compares the forecast forecast_base to its competitors is saved
+    fun_DM <- function(x) DM_matrix(x, alpha = alpha)[forecast_base, -forecast_base]
+    cells_DM[ , ,j] <- apply(s, 3, FUN = fun_DM)
   }
   # Mean results of DM tests over all repetitions
   DM <- apply(cells_DM, c(1,2), "mean")
@@ -197,40 +207,41 @@ experiment_cells <- function(phi, fcast_cell, nset, fbase, M, N) {
 
 
 # Print DM table to a .tex file
-array2teX <- function(tab, fcast, filePath, color = NULL) {
+array2teX <- function(mat, forecast_index, file_path, color = NULL) {
   # Take a matrix and print its values in a tabular
   # environment to a .tex file
   # Input values:
-  # tab      - Square matrix
-  # fcast    - Indices of forecasts for which the DM tests
-  #            were performed
-  # filePath - File path for .tex file
-  # color    - Background color for cells (optional)
-  k <- dim(tab)[1]
-  tab <- round(tab, digits = 2)
+  # mat            - Square matrix
+  # forecast_index - Indices of forecasts for which the DM tests
+  #                  were performed
+  # file_path      - File path for .tex file
+  # color          - Background color for cells (optional)
+  k <- dim(mat)[1]
+  mat <- round(mat, digits = 2)
   # header
   cstr <- paste(rep("c", k), collapse = "")
   begin <- paste("\\begin{tabular}{c", cstr, "}", collapse = "")
-  fnames <- paste0("$f_", fcast, "$")
-  ftex <- paste0( fnames, collapse = " & ")
+  forecast_names <- paste0("$f_", forecast_index, "$")
+  ftex <- paste0( forecast_names, collapse = " & ")
   ftex <- paste(" & ", ftex, " \\\\", collapse = "")
   # Write to file
-  write(begin, filePath)
-  write(ftex, filePath, append = T)
+  write(begin, file_path)
+  write(ftex, file_path, append = T)
   for (i in 1:k) {
     # write values
-    row <- sprintf('%.2f', tab[i, ])
+    row <- sprintf('%.2f', mat[i, ])
     if (is.character(color)) {
       # Add background color according to value in each cell
-      row_cols <- paste0("\\cellcolor{", color, "!", round(100 * tab[i, ]), "}" )
-      row <- paste0(row_cols, row)
+      row_colors <- paste0("\\cellcolor{", color, "!", round(100 * mat[i, ]),
+                           "}")
+      row <- paste0(row_colors, row)
     } 
     row[i] <- " "
     row <- paste(row, collapse = " & ")
-    row <- paste0(fnames[i], " & ", row, " \\\\")
-    write(row, filePath, append = T)
+    row <- paste0(forecast_names[i], " & ", row, " \\\\")
+    write(row, file_path, append = T)
   }
-  write("\\end{tabular}", filePath, append = T)
+  write("\\end{tabular}", file_path, append = T)
 }
 
 ymgp <- c(2,0.6,0)
@@ -240,42 +251,47 @@ cex.axis <- 1.4
 gmgp <- c(3, 1.3, 0) 
 
 # Produce boxplots for several experiments
-myBoxplot <- function(boxlist, fnames, mnames, ylim, filePath, zline = TRUE) {
+boxplot_score <- function(boxlist, forecast_names, model_names, ylim, file_path,
+                          zero_line = TRUE) {
   # Input values:
-  # boxlist  - List of values
-  # fnames   - Group labels, can be indices of forecasts
-  # mnames   - Titles of the individual boxplots
-  # ylim     - List of ranges for the boxplots
-  # filePath - File path for .pdf file
-  # zline    - Plot horizontal line at zero?
-  nplots <- length(boxlist)
-  nfcast <- dim(boxlist[[1]])[2]
-  nrepeats <- dim(boxlist[[1]])[1]
-  if (is.numeric(fnames)) fnames <- rep(list(paste0("f", fnames)), nplots)
-  pdf(filePath, width = 14, height = 6)
-  par(mfrow = c(1,nplots), cex = 1, cex.axis = cex.axis, cex.main = cex.main,
+  # boxlist        - List of values
+  # forecast_names - Group labels, can be indices of forecasts
+  # model_names    - Titles of the individual boxplots
+  # ylim           - List of ranges for the boxplots
+  # file_path      - File path for .pdf file
+  # zero_line      - Plot horizontal line at zero?
+  n_plots <- length(boxlist)
+  n_forecast <- dim(boxlist[[1]])[2]
+  n_repeats <- dim(boxlist[[1]])[1]
+  if (is.numeric(forecast_names)) {
+    forecast_names <- rep(list(paste0("f", forecast_names)), n_plots)
+  }
+  pdf(file_path, width = 14, height = 6)
+  par(mfrow = c(1,n_plots), cex = 1, cex.axis = cex.axis, cex.main = cex.main,
       mar = c(3.1, 1.6, 2, 0.3), mgp = gmgp)
-  for (i in 1:nplots) {
-    boxplot(split(boxlist[[i]], rep(1:nfcast, each = nrepeats)), main = mnames[[i]],
-            ylim = ylim[[i]], yaxt = "n", xaxt = "s", col = "lightgray", names = fnames[[i]])
+  for (i in 1:n_plots) {
+    boxplot(split(boxlist[[i]], rep(1:n_forecast, each = n_repeats)),
+            main = model_names[[i]], ylim = ylim[[i]], yaxt = "n", xaxt = "s",
+            col = "lightgray", names = forecast_names[[i]])
     axis(2, mgp = ymgp, cex.axis = ycex.axis)
-    if (zline) abline(h = 0)
+    if (zero_line) abline(h = 0)
   }
   dev.off()
 }
 
 # Produce 3x2 plot of the intensity function forecasts
-plotIntensities <- function(fcast_funs, filePath) {
+plot_intensities <- function(forecast_functions, file_path) {
   # Input values:
-  # fcast_funs - List of forecasts
-  # filePath   - File path for .pdf file
+  # forecast_functions - List of forecasts
+  # file_path          - File path for .pdf file
   # Define grid
-  ngrid <- 100
-  x <- y <- seq(0, 1, length = ngrid)
+  n_grid <- 100
+  x <- y <- seq(0, 1, length = n_grid)
   # Compute function values on the grid
-  zvals <- sapply(fcast_funs, function(fun) outer(x,y, fun), simplify = "array")
+  zvals <- sapply(forecast_functions, function(fun) outer(x,y, fun),
+                  simplify = "array")
   zlim <- c(min(zvals), max(zvals))
-  pdf(filePath, width = 7, height = 10)
+  pdf(file_path, width = 7, height = 10)
   par(mfrow = c(3,2), cex = 1, cex.main = 1, mar = c(2.1, 2, 1.5, 1.5),
       mgp = c(3, 0.7, 0.2), cex.axis = 0.9)
   for (i in 1:6) {
@@ -292,31 +308,32 @@ plotIntensities <- function(fcast_funs, filePath) {
 
 # Produce plot of the functions corresponding to the product density 
 # forecasts
-plotProduct <- function(fcast_funs, filePath) {
+plot_product_densities <- function(forecast_functions, file_path) {
   # Input values:
-  # fcast_funs - List of forecasts
-  # filePath   - File path for .pdf file
-  cols <- c("magenta", "green", "black", "blue", "red")
+  # forecast_functions - List of forecasts
+  # file_path          - File path for .pdf file
+  colors <- c("magenta", "green", "black", "blue", "red")
   lwds <- c(3,4,3,3,3)
   ltys <- c("dashed", "dotted", "solid", "dotdash", "A4343434")
   r <- seq(0, 0.2, by = 0.001)
   ylim <- c(0, exp(LGCPvar) * lambda^2)
-  pdf(filePath, width = 10, height=6)
+  pdf(file_path, width = 10, height=6)
   par(cex.axis = cex.axis, cex.main = cex.main,
       mar = c(3, 2.1, 1.5, 0.6) )
-  plot(r, fcast_funs[[1]](r), ty="l", col = cols[1], ylim=ylim, lty = ltys[1],
-       lwd = lwds[[1]], main = NULL, ylab = NULL)
-  for (i in 2:length(fcast_funs)) {
-    lines(r, fcast_funs[[i]](r), col = cols[i], lwd = lwds[[i]], lty = ltys[i])
+  plot(r, forecast_functions[[1]](r), ty="l", col = colors[1], ylim=ylim,
+       lty = ltys[1], lwd = lwds[[1]], main = NULL, ylab = NULL)
+  for (i in 2:length(forecast_functions)) {
+    lines(r, forecast_functions[[i]](r), col = colors[i], lwd = lwds[[i]],
+          lty = ltys[i])
   } 
   legend(x=0.165, y=3150, legend = c("f1", "f2", "f3", "f4", "f5"),
-         lwd = lwds, cex = cex.main, lty = ltys, col = cols, seg.len = 3)
+         lwd = lwds, cex = cex.main, lty = ltys, col = colors, seg.len = 3)
   dev.off()
 }
 
 
 # Compute collection of grid cell integrals
-cellIntegrals <- function(fun, k) {
+cell_integrals <- function(fun, k) {
   # Input values:
   # fun - Intensity function
   # k   - Number of intervals in the partition of
@@ -335,7 +352,7 @@ cellIntegrals <- function(fun, k) {
 }
 
 # Count the number of points in the grid cells
-cellCount <- function(ppat, k) {
+cell_counts <- function(ppat, k) {
   # Intput values:
   # ppat - Point pattern (class ppp)
   # k    - Number of intervals in the partition of
@@ -353,38 +370,40 @@ cellCount <- function(ppat, k) {
 
 
 # Plot the convergence of DM tests preferring frequencies
-plotDMconv <- function(approxlist, DMlims, nset, fbase, mnames, filePath) {
+plot_DM_convergence <- function(DM_cells, DM_inf, n_partition, forecast_base,
+                                model_names, file_path) {
   # Input values:
-  # approxlist - List of mean DM test results based on S_cell and
-  #              different partitions
-  # DMlims     - List of mean DM test results based on the scoring
-  #              function S2 (function ScoreIntensity2)
-  # nset       - number of intervals in the partition of each axis
-  # fbase      - Index of the forecast for which the convergence of
-  #              the preferring probabilities should be studied
-  # mnames     - Titles of the individual plots
-  # filePath   - File path for .pdf file
-  cols <- c("black", "magenta", "green", "blue", "red")
+  # DM_cells      - List of mean DM test results based on S_cell and
+  #                 different partitions
+  # DM_inf        - List of mean DM test results based on the scoring
+  #                 function S2 (function S_intensity2)
+  # n_partition   - number of intervals in the partition of each axis
+  # forecast_base - Index of the forecast for which the convergence of
+  #                 the preferring probabilities should be studied
+  # model_names   - Titles of the individual plots
+  # file_path     - File path for .pdf file
+  colors <- c("black", "magenta", "green", "blue", "red")
   ltys <- c("dashed", "dotted", "dotdash", "twodash", "A4343434")
   lwds <- c(3,4,3,3,3)
-  fnames <- paste0("f", fcast[-fbase])
-  nfcast <- length(fcast)
-  ngrid <- length(nset)
-  pdf(filePath, width = 14, height=13)
+  forecast_names <- paste0("f", forecast_index[-forecast_base])
+  n_forecast <- length(forecast_index)
+  n_grid <- length(n_partition)
+  pdf(file_path, width = 14, height=13)
   par(mfrow = c(2,2), cex = 1, cex.axis = cex.axis, cex.main = cex.main,
       mar = c(2.5, 2.5, 3, 0.5), mgp = gmgp)
   for (j in 1:4) {
-    plot(1:ngrid, rep(1,ngrid), col = "white", main = mnames[j],
+    plot(1:n_grid, rep(1,n_grid), col = "white", main = model_names[j],
          ylim = c(0,1), xaxt = "n")
-    axis(1, 1:ngrid, nset)
-    lims <- DMlims[[j]][fbase, -fbase]
-    for (i in 1:(nfcast-1)) {
-      lines(1:ngrid, approxlist[[j]][i, ], col = cols[i], lty = ltys[i], lwd = lwds[i])
-      abline(h = lims[i], col = cols[i])
+    axis(1, 1:n_grid, n_partition)
+    lims <- DM_inf[[j]][forecast_base, -forecast_base]
+    for (i in 1:(n_forecast-1)) {
+      lines(1:n_grid, DM_cells[[j]][i, ], col = colors[i], lty = ltys[i],
+            lwd = lwds[i])
+      abline(h = lims[i], col = colors[i])
     }
     # Add legend only to first plot for lack of space
-    if (j == 1) legend(ngrid - 1.3, 0.38, legend = fnames, cex = cex.main,
-                       lwd = lwds, col = cols, lty = ltys, seg.len = 3)
+    if (j == 1) legend(n_grid - 1.3, 0.38, legend = forecast_names, cex = cex.main,
+                       lwd = lwds, col = colors, lty = ltys, seg.len = 3)
   }
   dev.off()
 }

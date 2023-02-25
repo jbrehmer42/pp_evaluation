@@ -13,13 +13,13 @@ lehr_estimate <- function(var, n) sqrt(8 * var / n)
 
 
 # Load time stamps of the model outputs
-load_times <- function(filePath, lastday) {
+load_times <- function(file_path, last_day) {
   # Input values:
-  # filePath - File path for the time stamps file
-  # lastday  - Last day for which forecasts can be
-  #            evaluated.
+  # file_path - File path for the time stamps file
+  # last_day  - Last day for which forecasts can be
+  #             evaluated.
   # Read time stamps from file
-  raw_strings <- read.table(filePath, skip = 1, sep = ";")
+  raw_strings <- read.table(file_path, skip = 1, sep = ";")
   # Convert time stamps to data frame of integers
   times <- sapply(raw_strings,
                   function (x) unlist(regmatches(x, gregexpr("(\\d+)", x))))
@@ -36,8 +36,11 @@ load_times <- function(filePath, lastday) {
   }
   # Adjust for last day for which data is available. All
   # days after this day will be deleted
-  matchlastday <- (times$DD == lastday$DD) & (times$MM == lastday$MM) & (times$YY == lastday$YY)
-  if (any(matchlastday)) tindex[max(which(matchlastday)+1):length(tindex)] <- FALSE
+  match_last_day <- (times$DD == last_day$DD) & (times$MM == last_day$MM) &
+    (times$YY == last_day$YY)
+  if (any(match_last_day)) {
+    tindex[max(which(match_last_day)+1):length(tindex)] <- FALSE
+  }
   times <- times[tindex, ]
   # Return new time stamps and index of corresponding rows
   return(list(times = times, tindex = tindex))
@@ -45,19 +48,19 @@ load_times <- function(filePath, lastday) {
 
 
 # Load forecast values of the models
-load_models <- function(filePaths, tindex) {
+load_models <- function(file_paths, tindex) {
   # Input values:
-  # filePaths - File paths for the model outputs
-  # tindex    - Index of model runs (rows) to be used
+  # file_paths - File paths for the model outputs
+  # tindex     - Index of model runs (rows) to be used
   # Assume that the file tindex applies to all
   # forecast model files
   # Read forecast values from files
-  nmod <- length(filePaths)
+  nmod <- length(file_paths)
   models <- list()
   for (i in 1:nmod) {
     # Rows are days
     # Columns are grid cells
-    models[[i]] <- as.matrix( read.table( xzfile(filePaths[i]) ) )
+    models[[i]] <- as.matrix( read.table( xzfile(file_paths[i]) ) )
     attr(models[[i]], "dimnames") <- NULL
     # delete rows corresponding to multiple model runs on one day
     models[[i]] <- models[[i]][tindex, ]
@@ -68,11 +71,11 @@ load_models <- function(filePaths, tindex) {
 
 
 # Load grid cells (testing region)
-load_cells <- function(filePath) {
+load_cells <- function(file_path) {
   # Input values:
-  # filePath - File path for the grid cells file
+  # file_path - File path for the grid cells file
   # Read grid cell file
-  cells <- read.csv(filePath, header = FALSE, skip = 1,
+  cells <- read.csv(file_path, header = FALSE, skip = 1,
                     col.names = c("LON", "LAT"))
   # Start numbering the grid cells with 1 (just for
   # convenience and interpretability)
@@ -87,12 +90,12 @@ load_cells <- function(filePath) {
 
 
 # Load events data.frame
-load_events <- function(filePath, times) {
+load_events <- function(file_path, times) {
   # Input values:
-  # filePath - File path for the events file
-  # times    - Time stamps of testing period
+  # file_path - File path for the events file
+  # times     - Time stamps of testing period
   # Read events file
-  events <- read.csv(filePath, header = FALSE, skip = 1,
+  events <- read.csv(file_path, header = FALSE, skip = 1,
                      col.names = c("time", "LAT", "LON", "DEP", "MAG"))
   # Convert time stamps to data frame of integers
   time_column <- sapply(events[1],
@@ -107,18 +110,18 @@ load_events <- function(filePath, times) {
   # Assign the day number (time index TI) to events. Days
   # of the testing period (times) are consecutively numbered
   n <- dim(events)[1]
-  Tindex <- rep(-1, n)
+  time_index <- rep(-1, n)
   for (i in 1:n) {
     DD <- events$DD[i]
     MM <- events$MM[i]
     YY <- events$YY[i]
     gind <- (times$DD == DD) & (times$MM == MM) & (times$YY == YY)
-    if (any(gind)) Tindex[i] <- which(gind)
+    if (any(gind)) time_index[i] <- which(gind)
   }
   # Erase events which do not occur during the testing period
-  events <- events[(Tindex > 0), ]
+  events <- events[(time_index > 0), ]
   # Add column time index (TI) to the events data frame
-  events$TI <- Tindex[Tindex > 0]
+  events$TI <- time_index[time_index > 0]
   return(events)
 }
 
@@ -126,7 +129,7 @@ load_events <- function(filePath, times) {
 # Filter out events which do not fall into the 
 # testing region. Assign a grid cell number to
 # the remaining events
-filterRegion <- function(events, cells) {
+filter_region <- function(events, cells) {
   # Input values:
   # events - Data frame of observed events
   # cells  - Data frame of grid cells
@@ -144,11 +147,11 @@ filterRegion <- function(events, cells) {
   cell_lo <- cells$LAT - 0.5 * size_LAT
   cell_up <- cells$LAT + 0.5 * size_LAT
   for (i in 1:n) {
-    isLON <- (cell_le < events$LON[i]) & (events$LON[i] <= cell_ri)
-    isLAT <- (cell_lo < events$LAT[i]) & (events$LAT[i] <= cell_up)
-    if (any(isLON & isLAT) ) {
+    is_LON <- (cell_le < events$LON[i]) & (events$LON[i] <= cell_ri)
+    is_LAT <- (cell_lo < events$LAT[i]) & (events$LAT[i] <= cell_up)
+    if (any(is_LON & is_LAT) ) {
       # Assign cell number inside testing region
-      ind[i] <- cells$N[isLON & isLAT]
+      ind[i] <- cells$N[is_LON & is_LAT]
     } else {
       # Set to -1 outside testing region
       ind[i] <- -1
@@ -172,25 +175,25 @@ events2obs <- function(events, ndays, ncells) {
   # compared to the forecast model output matrices
   # Rows are days
   # Columns are grid cells
-  obs <- Matrix(0, ncol = ncells, nrow = ndays, sparse = T)
+  observations <- Matrix(0, ncol = ncells, nrow = ndays, sparse = T)
   for (i in 1:ndays) {
     # Collect events in a 7-day period
     ind <- (events$TI >= i) & (events$TI < i + 7)
     if (any(ind)) {
-      obs[i, ] <- tabulate(events$N[ind], nbins = ncells)
+      observations[i, ] <- tabulate(events$N[ind], nbins = ncells)
     } else next
   }
-  return(obs)
+  return(observations)
 }
 
 
 # Print table of mean scores
-scores2teX <- function(scores_pois, scores_quad, mnames, filePath) {
+scores2teX <- function(scores_pois, scores_quad, model_names, file_path) {
   # Input values:
-  # scores_pois - Matrix of daily scores
-  # scores_quad - Matrix of daily scores
-  # mnames      - Names of the forecast models
-  # filePath    - File path for the .tex file
+  # scores_pois   - Matrix of daily scores
+  # scores_quad   - Matrix of daily scores
+  # model_names   - Names of the forecast models
+  # file_path     - File path for the .tex file
   # Take score values and print teX code to
   # file to get values in tabular environment
   # Compute mean scores
@@ -200,33 +203,34 @@ scores2teX <- function(scores_pois, scores_quad, mnames, filePath) {
   begin <- "\\begin{tabular}{l cc}"
   head <- paste("Model", "pois", "quad \\\\", sep = " & ")
   # Write teX code to file
-  write(begin, filePath)
-  write("\\hline \\hline", filePath, append = T)
-  write(head, filePath, append = T)
-  write("\\hline", filePath, append = T)
+  write(begin, file_path)
+  write("\\hline \\hline", file_path, append = T)
+  write(head, file_path, append = T)
+  write("\\hline", file_path, append = T)
   for (i in 1:k) {
     # Write score values
     row_pois <- sprintf('%.2f', scores_pois[i])
     row_quad <- sprintf('%.4f', scores_quad[i])
-    row <- paste(mnames[i], row_pois, row_quad, sep = " & ")
+    row <- paste(model_names[i], row_pois, row_quad, sep = " & ")
     row <- paste0(row, " \\\\")
-    write(row, filePath, append = T)
+    write(row, file_path, append = T)
   }
-  write("\\hline", filePath, append = T)
-  write("\\end{tabular}", filePath, append = T)
+  write("\\hline", file_path, append = T)
+  write("\\end{tabular}", file_path, append = T)
 }
 
 
 # Plot daily scores of the models
-plotScores <- function(scores, times, mnames, mcols, filePath, events = NULL, logscale = T) {
+plot_scores <- function(scores, times, model_names, model_colors, file_path,
+                        events = NULL, logscale = T) {
   # Input values:
-  # scores   - Matrix of daily scores
-  # times    - Time stamps of the scores
-  # mnames   - Model names for the legend
-  # mcols    - Array of colors for the lines
-  # filePath - File path for .pdf file
-  # events   - Data frame of events (optional)
-  # logscale - Should scores be on log scale?
+  # scores        - Matrix of daily scores
+  # times         - Time stamps of the scores
+  # model_names   - Model names for the legend
+  # model_colors  - Array of colors for the lines
+  # file_path     - File path for .pdf file
+  # events        - Data frame of events (optional)
+  # logscale      - Should scores be on log scale?
   ndays <- dim(times)[1]
   ylab <- "score"
   if(logscale) {
@@ -246,32 +250,32 @@ plotScores <- function(scores, times, mnames, mcols, filePath, events = NULL, lo
   january1s <- (times$DD == 1) & (times$MM == 1)
   xlabels <- times$YY[january1s]
   xats <- which(january1s)
-  pdf(filePath, width = 8, height = 5.5)
+  pdf(file_path, width = 8, height = 5.5)
   par(mar = c(4, 4, 0.5, 0.5))
   plot(1:ndays, rep(0, ndays), ylim = ylim, xlab = "days", col = "white",
        ylab = ylab, main = "", xaxt="n")
   for (i in 1:ncol(scores)) {
-    lines(1:ndays, scores[ ,i], col = mcols[i])
+    lines(1:ndays, scores[ ,i], col = model_colors[i])
   }
   # Add event circles if possible
   if (hasArg(events))  points(evt_days, rep(evt_y, length(evt_days)), cex = 0.8)
   axis(1, at = xats, labels = xlabels)
-  legend(-10, ylim[2], mnames, col = mcols, lwd = 2)
+  legend(-10, ylim[2], model_names, col = model_colors, lwd = 2)
   dev.off()
 }
 
 
 # Plot a map of score differences by individually
 # coloring the grid cells
-diffMap <- function(vals, cells, filePath, events = NULL, borders = T) {
+plot_diffs_map <- function(vals, cells, file_path, events = NULL, borders = T) {
   # Input values:
-  # vals     - Numeric values corresponding to
+  # vals      - Numeric values corresponding to
   #            the grid cells
-  # cells    - Data frame of grid cells
-  # filePath - File path for .pdf file
-  # events   - Data frame of events (optional)
-  # borders  - Plot national borders? Requires 
-  #            R-package "maps"
+  # cells     - Data frame of grid cells
+  # file_path - File path for .pdf file
+  # events    - Data frame of events (optional)
+  # borders   - Plot national borders? Requires 
+  #             R-package "maps"
   # Set graphical paramters e.g. colors
   ylen <- 5
   nticks <- 7
@@ -287,7 +291,7 @@ diffMap <- function(vals, cells, filePath, events = NULL, borders = T) {
   col_scl[scl >= 0] <- hsv(pos_col, scl[scl >= 0])
   col_scl[scl < 0]  <- hsv(neg_col, -scl[scl < 0])
   # Create pdf file with two parts
-  pdf(filePath, width = 5, height = 4.4)
+  pdf(file_path, width = 5, height = 4.4)
   layout(matrix(1:2, 1, 2, byrow = T), widths = c(0.78, 0.22))
   # Plot the map
   par(mar = 2/3 * rep(1,4))
@@ -328,7 +332,7 @@ neigh_mat <- function(cells, k) {
   # Input values:
   # cells - Data frame of grid cells
   # k     - Integer specifying the size of
-  #         the neighborhodd for aggregation
+  #         the neighborhood for aggregation
   ncells <- dim(cells)[1]
   # Aggregation will usually be done for small values
   # of k so "sparse = T" makes sense in most cases
@@ -346,25 +350,27 @@ neigh_mat <- function(cells, k) {
 
 # Calculate mean and variance of the score differences for the computation
 # of the sample size table in sample_size_table
-calculate_means_and_vars <- function(models, obs, scoring_function) {
+calculate_means_and_vars <- function(models, observations, scoring_function) {
   # Input values:
-  # models            - List of model outputs matrices
-  # obs               - Observation matrix
-  # scoring_function  - Scoring function to compute score differences
+  # models            - List of model outputs
+  #                     matrices
+  # observations      - Observation matrix
+  # scoring_function  - Scoring function to compute
+  #                     score differences
   means <- vars <- diff_names <- c()
   i <- 1
   for (j in 1:4) {
     for (k in 1:4) {
       if (j >= k) next
-      score_diff <- rowSums( scoring_function(models[[j]], obs) 
-                             - scoring_function(models[[k]], obs))
+      score_diff <- rowSums( scoring_function(models[[j]], observations) 
+                             - scoring_function(models[[k]], observations))
       means[i] <- mean(score_diff)
       vars[i] <- var(score_diff)
       # Adjust name of difference such that model with larger score comes first
       if (means[i] >= 0) {
-        diff_names[i] <- paste(mnames[j], mnames[k], sep = "$-$")
+        diff_names[i] <- paste(model_names[j], model_names[k], sep = "$-$")
       } else {
-        diff_names[i] <- paste(mnames[k], mnames[j], sep = "$-$")
+        diff_names[i] <- paste(model_names[k], model_names[j], sep = "$-$")
       }
       i <- i + 1
     }
@@ -408,28 +414,24 @@ sample_size_table <- function(diff_means, diff_vars, diff_names, ndays,
   vals <- paste0("Variance $s^2$ &", vals, " \\\\")
   write(vals, file_path, append = T)
   write("\\hline", file_path, append = T)
-  # Row with detectable differences for full sample
-  n <- ndays
-  l_est <- lehr_estimate(diff_vars[mean_order], n)
-  vals <- paste(sprintf("%.3f", scaling * l_est), collapse = " & ")
-  vals <- paste0("$d_{", n, "}$ & ", vals, " \\\\")
-  write(vals, file_path, append = T)
-  # Row with detectable differences for weekly sample
-  n <- floor(ndays/7)
-  l_est <- lehr_estimate(diff_vars[mean_order], n)
-  vals <- paste(sprintf("%.3f", scaling * l_est), collapse = " & ")
-  vals <- paste0("$d_{", n, "}$ & ", vals, " \\\\")
-  write(vals, file_path, append = T)
+  # Rows with detectable differences for full and weekly sample
+  for (n in c(ndays, floor(ndays/7))) {
+    l_est <- lehr_estimate(diff_vars[mean_order], n)
+    vals <- paste(sprintf("%.3f", scaling * l_est), collapse = " & ")
+    vals <- paste0("$d_{", n, "}$ & ", vals, " \\\\")
+    write(vals, file_path, append = T)
+  }
   write("\\hline", file_path, append = T)
   write("\\end{tabular}", file_path, append = T)
 }
 
 
 # Plot ACF for score differences of all model combinations
-plot_score_diffs_acf <- function(models, obs, scoring_function, file_path) {
+plot_score_diffs_acf <- function(models, observations, scoring_function,
+                                 file_path) {
   # Input values:
   # models            - List of model outputs matrices
-  # obs               - Observation matrix
+  # observations      - Observation matrix
   # scoring_function  - Scoring function to compute score differences
   # file_path         - File path for .pdf file
   diff_means <- diff_names <- c()
@@ -438,15 +440,15 @@ plot_score_diffs_acf <- function(models, obs, scoring_function, file_path) {
   for (j in 1:4) {
     for (k in 1:4) {
       if (j >= k) next
-      score_diff <- rowSums( scoring_function(models[[j]], obs) 
-                             - scoring_function(models[[k]], obs))
+      score_diff <- rowSums( scoring_function(models[[j]], observations) 
+                             - scoring_function(models[[k]], observations))
       diffs[[i]] <- score_diff
       diff_means[i] <- mean(score_diff)
       # Adjust name of difference such that model with larger score comes first
       if (diff_means[i] >= 0) {
-        diff_names[i] <- paste(mnames[j], mnames[k], sep = "-")
+        diff_names[i] <- paste(model_names[j], model_names[k], sep = "-")
       } else {
-        diff_names[i] <- paste(mnames[k], mnames[j], sep = "-")
+        diff_names[i] <- paste(model_names[k], model_names[j], sep = "-")
       }
       i <- i + 1
     }
